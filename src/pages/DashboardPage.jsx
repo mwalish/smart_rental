@@ -34,7 +34,8 @@ export default function DashboardPage() {
         return [
           { to: '/dashboard', label: 'Overview', icon: 'bi-house-door' },
           { to: '/dashboard/properties', label: 'Properties', icon: 'bi-building' },
-          { to: '/dashboard/tenants', label: 'Tenants & Requests', icon: 'bi-people' },
+          { to: '/dashboard/tenants', label: 'Maintenance', icon: 'bi-tools' },
+          { to: '/dashboard/requests', label: 'Rental Requests', icon: 'bi-envelope' },
           { to: '/dashboard/payments', label: 'Payments', icon: 'bi-cash-coin' },
           { to: '/dashboard/leases', label: 'Leases', icon: 'bi-file-earmark-text' },
           { to: '/dashboard/meetings', label: 'Meetings', icon: 'bi-calendar-event' },
@@ -43,7 +44,7 @@ export default function DashboardPage() {
         return [
           { to: '/dashboard', label: 'Overview', icon: 'bi-house-door' },
           { to: '/dashboard/my-property', label: 'My Property', icon: 'bi-building' },
-          { to: '/dashboard/payments', label: 'My Payments', icon: 'bi-cash-coin' },
+          { to: '/dashboard/tenant-payments', label: 'My Payments', icon: 'bi-cash-coin' },
           { to: '/dashboard/maintenance', label: 'Requests', icon: 'bi-wrench' },
         ]
       default:

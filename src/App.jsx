@@ -55,7 +55,7 @@ export default function App() {
       element: <ProtectedRoute allowedRoles={['landlord']}><LeasesPage /></ProtectedRoute>
     },
     {
-      path: '/dashboard/maintenance',
+      path: '/dashboard/requests',
       element: <ProtectedRoute allowedRoles={['landlord']}><RequestsPage /></ProtectedRoute>
     },
     {
@@ -69,7 +69,7 @@ export default function App() {
       element: <ProtectedRoute allowedRoles={['tenant']}><MyPropertyPage /></ProtectedRoute>
     },
     {
-      path: '/dashboard/payments',
+      path: '/dashboard/tenant-payments',
       element: <ProtectedRoute allowedRoles={['tenant']}><TenantPaymentsPage /></ProtectedRoute>
     },
     {
