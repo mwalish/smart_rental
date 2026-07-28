@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useContext } from 'react'
 import api from '../../services/api'
 import { AuthContext } from '../../AuthContext'
+import { PageHeader, FilterTabs, Badge, EmptyState, LoadingSpinner, FormField, Input, Textarea, ModalActions } from '../../components/ui'
 
-const STATUS_COLORS = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  in_progress: 'bg-blue-100 text-blue-700',
-  resolved: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-700',
-}
-
-const EMPTY_FORM = { property: '', issue: '', description: '' }
+const FILTERS = [
+  { key: 'ALL', label: 'All' },
+  { key: 'PENDING', label: 'Pending' },
+  { key: 'IN_PROGRESS', label: 'In Progress' },
+  { key: 'RESOLVED', label: 'Resolved' },
+  { key: 'CANCELLED', label: 'Cancelled' },
+]
+const EMPTY = { property: '', issue: '', description: '' }
 
 export default function MaintenancePage() {
   const { profile } = useContext(AuthContext)
@@ -17,29 +18,19 @@ export default function MaintenancePage() {
   const [properties, setProperties] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState(EMPTY_FORM)
+  const [form, setForm] = useState(EMPTY)
   const [submitting, setSubmitting] = useState(false)
-  const [activeFilter, setActiveFilter] = useState('ALL')
+  const [filter, setFilter] = useState('ALL')
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [maintRes, leaseRes] = await Promise.all([
-          api.get('core/maintenance/'),
-          api.get('core/leases/')
-        ])
-        setRequests(maintRes.data.maintenance_requests || [])
-        // Extract unique properties from tenant's leases
-        const leaseProps = (leaseRes.data.leases || [])
-          .filter(l => l.status === 'ACTIVE' && l.property)
-          .map(l => l.property)
-        setProperties(leaseProps)
-        if (leaseProps.length === 1) setForm(p => ({ ...p, property: leaseProps[0].id }))
-      } catch (err) {
-        console.error('Failed to load data:', err)
-      } finally {
-        setLoading(false)
-      }
+        const [mr, lr] = await Promise.all([api.get('core/maintenance/'), api.get('core/leases/')])
+        setRequests(mr.data.maintenance_requests || [])
+        const props = (lr.data.leases || []).filter(l => l.status === 'ACTIVE' && l.property).map(l => l.property)
+        setProperties(props)
+        if (props.length === 1) setForm(p => ({ ...p, property: props[0].id }))
+      } catch (e) { console.error(e) } finally { setLoading(false) }
     }
     load()
   }, [])
@@ -50,133 +41,83 @@ export default function MaintenancePage() {
     try {
       const res = await api.post('core/maintenance/', form)
       setRequests(prev => [res.data.maintenance, ...prev])
-      setForm(EMPTY_FORM)
-      setShowForm(false)
-    } catch (err) {
-      alert(err.response?.data?.error || 'Failed to submit request')
-    } finally {
-      setSubmitting(false)
-    }
+      setForm(EMPTY); setShowForm(false)
+    } catch (err) { alert(err.response?.data?.error || 'Failed to submit') }
+    finally { setSubmitting(false) }
   }
 
-  const filtered = requests.filter(r =>
-    activeFilter === 'ALL' || (r.status || '').toUpperCase() === activeFilter
-  )
+  const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
+  const filtered = requests.filter(r => filter === 'ALL' || (r.status || '').toUpperCase() === filter)
+
+  const STATUS_ICONS = { pending: 'bi-hourglass-split', in_progress: 'bi-arrow-repeat', resolved: 'bi-check-circle-fill', cancelled: 'bi-x-circle-fill' }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Maintenance Requests</h2>
-          {profile?.full_name && <p className="text-sm text-gray-500 mt-0.5">{profile.full_name}</p>}
-        </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700"
-        >
-          {showForm ? 'Cancel' : '+ New Request'}
-        </button>
-      </div>
+    <div className="p-6 space-y-5 animate-fade-up">
+      <PageHeader
+        title="Maintenance Requests"
+        subtitle={profile?.full_name}
+        action={
+          <button onClick={() => setShowForm(!showForm)} className="btn-primary px-5 py-2.5 text-sm flex items-center gap-2">
+            {showForm ? <><i className="bi bi-x-lg"></i> Cancel</> : <><i className="bi bi-plus-lg"></i> New Request</>}
+          </button>
+        }
+      />
 
       {/* Submit Form */}
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 space-y-4">
-          <h3 className="font-semibold text-gray-700">Submit a Maintenance Request</h3>
-
-          {properties.length > 1 && (
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Property</label>
-              <select
-                value={form.property}
-                onChange={e => setForm(p => ({ ...p, property: e.target.value }))}
-                required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-              >
-                <option value="">Select property...</option>
-                {properties.map(p => (
-                  <option key={p.id} value={p.id}>{p.title}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Issue</label>
-            <input
-              type="text"
-              value={form.issue}
-              onChange={e => setForm(p => ({ ...p, issue: e.target.value }))}
-              required
-              placeholder="e.g. Broken pipe, No electricity..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Description (optional)</label>
-            <textarea
-              rows={3}
-              value={form.description}
-              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="Describe the issue in more detail..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-6 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 disabled:opacity-50"
-          >
-            {submitting ? 'Submitting...' : 'Submit Request'}
-          </button>
-        </form>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <p className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+            <i className="bi bi-tools text-teal-500"></i> Submit a Maintenance Request
+          </p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {properties.length > 1 && (
+              <FormField label="Property">
+                <select value={form.property} onChange={set('property')} required className="input-field w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50">
+                  <option value="">Select property...</option>
+                  {properties.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                </select>
+              </FormField>
+            )}
+            <FormField label="Issue"><Input value={form.issue} onChange={set('issue')} required placeholder="e.g. Broken pipe, No electricity..." /></FormField>
+            <FormField label="Description (optional)"><Textarea rows={3} value={form.description} onChange={set('description')} placeholder="Describe the issue in more detail..." /></FormField>
+            <ModalActions onCancel={() => setShowForm(false)} submitLabel="Submit Request" submitting={submitting} />
+          </form>
+        </div>
       )}
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          { k: 'ALL', l: 'All' },
-          { k: 'PENDING', l: 'Pending' },
-          { k: 'IN_PROGRESS', l: 'In Progress' },
-          { k: 'RESOLVED', l: 'Resolved' },
-          { k: 'CANCELLED', l: 'Cancelled' },
-        ].map(f => (
-          <button
-            key={f.k}
-            onClick={() => setActiveFilter(f.k)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium ${activeFilter === f.k ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
-            {f.l}
-          </button>
-        ))}
-      </div>
+      <FilterTabs options={FILTERS} active={filter} onChange={setFilter} />
 
-      {/* Request List */}
-      {loading ? (
-        <p className="text-center text-gray-500">Loading...</p>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <i className="bi bi-tools text-4xl block mb-3"></i>
-          <p>No maintenance requests yet.</p>
-        </div>
+      {loading ? <LoadingSpinner /> : filtered.length === 0 ? (
+        <EmptyState icon="bi-tools" message="No maintenance requests yet." />
       ) : (
-        <div className="space-y-4">
-          {filtered.map(r => (
-            <div key={r.id} className="bg-white rounded-xl shadow-sm p-5 flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-800">{r.issue || '—'}</p>
-                <p className="text-sm text-gray-500 mt-0.5">{r.property_title || '—'}</p>
-                {r.description && <p className="text-sm text-gray-600 mt-1">{r.description}</p>}
-                <p className="text-xs text-gray-400 mt-2">
-                  {r.created_at ? new Date(r.created_at).toLocaleDateString() : ''}
-                </p>
+        <div className="space-y-3">
+          {filtered.map(r => {
+            const statusKey = (r.status || 'pending').toLowerCase()
+            return (
+              <div key={r.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+                  statusKey === 'resolved' ? 'bg-green-100' :
+                  statusKey === 'in_progress' ? 'bg-blue-100' :
+                  statusKey === 'cancelled' ? 'bg-red-100' : 'bg-amber-100'
+                }`}>
+                  <i className={`bi ${STATUS_ICONS[statusKey] || 'bi-tools'} text-sm ${
+                    statusKey === 'resolved' ? 'text-green-600' :
+                    statusKey === 'in_progress' ? 'text-blue-600' :
+                    statusKey === 'cancelled' ? 'text-red-600' : 'text-amber-600'
+                  }`}></i>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-gray-900">{r.issue || '—'}</p>
+                  <p className="text-sm text-gray-400 mt-0.5 flex items-center gap-1">
+                    <i className="bi bi-building text-xs"></i>{r.property_title || '—'}
+                  </p>
+                  {r.description && <p className="text-sm text-gray-500 mt-1.5">{r.description}</p>}
+                  <p className="text-xs text-gray-300 mt-2">{r.created_at ? new Date(r.created_at).toLocaleDateString() : ''}</p>
+                </div>
+                <Badge status={r.status || 'pending'} />
               </div>
-              <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${STATUS_COLORS[(r.status || '').toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
-                {(r.status || 'pending').replace('_', ' ').toUpperCase()}
-              </span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

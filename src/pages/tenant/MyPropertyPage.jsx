@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import api from '../../services/api'
 import { AuthContext } from '../../AuthContext'
+import { LoadingSpinner, Badge } from '../../components/ui'
 
 export default function MyPropertyPage() {
   const { profile } = useContext(AuthContext)
@@ -8,110 +9,108 @@ export default function MyPropertyPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await api.get('core/leases/')
-        const leases = res.data.leases || []
-        const active = leases.find(l => l.status === 'ACTIVE') || leases[0] || null
-        setLease(active)
-      } catch (err) {
-        console.error('Failed to load lease:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
+    api.get('core/leases/')
+      .then(r => {
+        const leases = r.data.leases || []
+        setLease(leases.find(l => l.status === 'ACTIVE') || leases[0] || null)
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <p className="p-6 text-center text-gray-500">Loading...</p>
-
-  if (!lease) return (
-    <div className="p-6 text-center py-16 text-gray-500">
-      <i className="bi bi-building text-4xl block mb-3"></i>
-      <p>No active lease found. Contact your landlord.</p>
-    </div>
-  )
-
-  const property = lease.property || {}
-  const statusColor = lease.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-    lease.status === 'EXPIRED' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+  if (loading) return <div className="p-6"><LoadingSpinner /></div>
 
   return (
-    <div className="p-6 space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800">My Property</h2>
+    <div className="p-6 space-y-5 animate-fade-up">
 
-      {/* Tenant Info Card */}
+      {/* Tenant Profile Card */}
       {profile && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h4 className="font-semibold text-gray-700 mb-3">Tenant Details</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-            <div>
-              <p className="text-gray-400">Full Name</p>
-              <p className="font-semibold text-gray-800">{profile.full_name || '—'}</p>
-            </div>
-            <div>
-              <p className="text-gray-400">ID Number</p>
-              <p className="font-semibold text-gray-800">{profile.id_number || '—'}</p>
-            </div>
-            <div>
-              <p className="text-gray-400">Phone</p>
-              <p className="font-semibold text-gray-800">{profile.phone || '—'}</p>
-            </div>
-            <div>
-              <p className="text-gray-400">Email</p>
-              <p className="font-semibold text-gray-800">{profile.email_address || '—'}</p>
-            </div>
-            {profile.alternative_phone && (
-              <div>
-                <p className="text-gray-400">Alt. Phone</p>
-                <p className="font-semibold text-gray-800">{profile.alternative_phone}</p>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-teal-500 to-cyan-400"></div>
+          <div className="p-6">
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center text-white text-2xl font-black shadow-lg">
+                {(profile.full_name || 'T')[0].toUpperCase()}
               </div>
-            )}
-            <div>
-              <p className="text-gray-400">Joined</p>
-              <p className="font-semibold text-gray-800">{profile.join_date || '—'}</p>
+              <div>
+                <h2 className="text-xl font-black text-gray-900">{profile.full_name}</h2>
+                <p className="text-sm text-gray-400 flex items-center gap-1.5 mt-0.5">
+                  <i className="bi bi-person-badge text-teal-500"></i> Tenant
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {[
+                { icon: 'bi-card-text', label: 'ID Number', val: profile.id_number },
+                { icon: 'bi-telephone', label: 'Phone', val: profile.phone },
+                { icon: 'bi-envelope', label: 'Email', val: profile.email_address },
+                { icon: 'bi-telephone-plus', label: 'Alt. Phone', val: profile.alternative_phone },
+                { icon: 'bi-calendar-check', label: 'Joined', val: profile.join_date },
+              ].filter(f => f.val).map(f => (
+                <div key={f.label} className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 flex items-center gap-1 mb-1">
+                    <i className={`bi ${f.icon} text-teal-500`}></i>{f.label}
+                  </p>
+                  <p className="text-sm font-semibold text-gray-800 truncate">{f.val}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* Property Card */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-800">{property.title || '—'}</h3>
-            <p className="text-gray-500 text-sm mt-1">
-              <i className="bi bi-geo-alt mr-1"></i>{property.location || '—'}
-            </p>
-          </div>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
-            {lease.status}
-          </span>
+      {/* Lease / Property Card */}
+      {!lease ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center text-gray-400">
+          <i className="bi bi-building text-5xl block mb-3 opacity-30"></i>
+          <p className="text-sm">No active lease found. Contact your landlord.</p>
         </div>
-        {property.description && (
-          <p className="text-sm text-gray-600 mb-4">{property.description}</p>
-        )}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-          <div>
-            <p className="text-gray-400">Monthly Rent</p>
-            <p className="font-semibold text-gray-800">KSh {Number(lease.monthly_rent).toLocaleString()}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">Lease Start</p>
-            <p className="font-semibold text-gray-800">{lease.start_date || '—'}</p>
-          </div>
-          <div>
-            <p className="text-gray-400">Lease End</p>
-            <p className="font-semibold text-gray-800">{lease.end_date || '—'}</p>
-          </div>
-        </div>
-      </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-violet-500 to-purple-400"></div>
+          <div className="p-6">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h3 className="text-lg font-black text-gray-900">{lease.property?.title || '—'}</h3>
+                <p className="text-sm text-gray-400 mt-0.5 flex items-center gap-1">
+                  <i className="bi bi-geo-alt text-violet-500"></i>{lease.property?.location || '—'}
+                </p>
+              </div>
+              <Badge status={lease.status} />
+            </div>
 
-      {/* Lease Terms */}
-      {lease.terms && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h4 className="font-semibold text-gray-700 mb-2">Lease Terms</h4>
-          <p className="text-sm text-gray-600 whitespace-pre-line">{lease.terms}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+              {[
+                { icon: 'bi-cash-stack', label: 'Monthly Rent', val: `KSh ${Number(lease.monthly_rent).toLocaleString()}`, color: 'text-teal-600' },
+                { icon: 'bi-calendar-check', label: 'Lease Start', val: lease.start_date || '—', color: 'text-gray-800' },
+                { icon: 'bi-calendar-x', label: 'Lease End', val: lease.end_date || '—', color: 'text-gray-800' },
+                { icon: 'bi-person-fill', label: 'Landlord', val: lease.landlord_name || '—', color: 'text-gray-800' },
+              ].map(f => (
+                <div key={f.label} className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 flex items-center gap-1 mb-1">
+                    <i className={`bi ${f.icon} text-violet-500`}></i>{f.label}
+                  </p>
+                  <p className={`text-sm font-bold ${f.color}`}>{f.val}</p>
+                </div>
+              ))}
+            </div>
+
+            {lease.property?.description && (
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <p className="text-xs text-gray-400 mb-1">Property Description</p>
+                <p className="text-sm text-gray-600">{lease.property.description}</p>
+              </div>
+            )}
+
+            {lease.terms && (
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                <p className="text-xs font-semibold text-amber-700 mb-1 flex items-center gap-1">
+                  <i className="bi bi-file-earmark-text"></i> Lease Terms
+                </p>
+                <p className="text-sm text-amber-800 whitespace-pre-line">{lease.terms}</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
