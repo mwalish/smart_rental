@@ -16,7 +16,17 @@ export const AuthProvider = ({ children }) => {
       return storedUser ? JSON.parse(storedUser) : null;
     } catch (err) {
       console.error("Corrupted user data in storage:", err);
-      localStorage.removeItem("user"); // Clean bad data
+      localStorage.removeItem("user");
+      return null;
+    }
+  });
+
+  const [profile, setProfile] = useState(() => {
+    try {
+      const storedProfile = localStorage.getItem("profile");
+      return storedProfile ? JSON.parse(storedProfile) : null;
+    } catch (err) {
+      localStorage.removeItem("profile");
       return null;
     }
   });
@@ -26,9 +36,11 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user");
+    localStorage.removeItem("profile");
     setToken("");
     setUser(null);
-    navigate("/login", { replace: true }); // Replace history so back button won't return
+    setProfile(null);
+    navigate("/login", { replace: true });
   }, [navigate]);
 
   // Auto-check token expiry on mount + token change
@@ -49,7 +61,7 @@ export const AuthProvider = ({ children }) => {
   }, [token, Logout]);
 
   return (
-    <AuthContext.Provider value={{ token, setToken, user, setUser, Logout }}>
+    <AuthContext.Provider value={{ token, setToken, user, setUser, profile, setProfile, Logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -4,7 +4,7 @@ import { AuthContext } from '../AuthContext'
 import api from '../services/api'
 
 export default function DashboardPage() {
-  const { user, Logout } = useContext(AuthContext)
+  const { user, profile, Logout } = useContext(AuthContext)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -39,13 +39,17 @@ export default function DashboardPage() {
           { to: '/dashboard/payments', label: 'Payments', icon: 'bi-cash-coin' },
           { to: '/dashboard/leases', label: 'Leases', icon: 'bi-file-earmark-text' },
           { to: '/dashboard/meetings', label: 'Meetings', icon: 'bi-calendar-event' },
+          { to: '/dashboard/notices', label: 'Notices', icon: 'bi-megaphone' },
+          { to: '/dashboard/register-tenant', label: 'Register Tenant', icon: 'bi-person-plus' },
         ]
       case 'tenant':
         return [
           { to: '/dashboard', label: 'Overview', icon: 'bi-house-door' },
           { to: '/dashboard/my-property', label: 'My Property', icon: 'bi-building' },
           { to: '/dashboard/tenant-payments', label: 'My Payments', icon: 'bi-cash-coin' },
-          { to: '/dashboard/maintenance', label: 'Requests', icon: 'bi-wrench' },
+          { to: '/dashboard/maintenance', label: 'Maintenance', icon: 'bi-tools' },
+          { to: '/dashboard/my-requests', label: 'Rental Requests', icon: 'bi-envelope' },
+          { to: '/dashboard/my-notices', label: 'Notices', icon: 'bi-megaphone' },
         ]
       default:
         return []
@@ -99,11 +103,11 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm font-medium text-gray-800">{user?.name}</p>
+              <p className="text-sm font-medium text-gray-800">{profile?.full_name || user?.name || user?.username}</p>
               <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
             </div>
             <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-bold">
-              {user?.name?.charAt(0).toUpperCase()}
+              {(profile?.full_name || user?.name || user?.username)?.charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
@@ -111,7 +115,7 @@ export default function DashboardPage() {
         {/* Dashboard Stats */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800">Welcome back, {user?.name}!</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Welcome back, {profile?.full_name || user?.name || user?.username}!</h2>
             <p className="text-gray-600 mt-1">Here’s what’s happening with your properties today.</p>
           </div>
 

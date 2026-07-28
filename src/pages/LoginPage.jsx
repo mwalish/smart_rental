@@ -28,13 +28,14 @@ export default function LoginPage() {
 
     try {
       const res = await api.post('core/login/', credentials)
-      const { access, refresh, user } = res.data
+      const { access, refresh, user, profile } = res.data
 
       setToken(access)
       setUser(user)
       localStorage.setItem('access_token', access)
       localStorage.setItem('refresh_token', refresh)
       localStorage.setItem('user', JSON.stringify(user))
+      if (profile) localStorage.setItem('profile', JSON.stringify(profile))
 
       navigate('/dashboard')
     } catch (err) {

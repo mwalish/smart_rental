@@ -14,11 +14,15 @@ import PaymentsPage from "./pages/landlord/PaymentsPage";
 import LeasesPage from "./pages/landlord/LeasesPage";
 import RequestsPage from "./pages/landlord/RequestsPage";
 import MeetingsPage from "./pages/landlord/MeetingsPage";
+import NoticesPage from "./pages/landlord/NoticesPage";
+import RegisterTenantPage from "./pages/landlord/RegisterTenantPage";
 
 // Tenant Pages
 import MyPropertyPage from "./pages/tenant/MyPropertyPage";
 import TenantPaymentsPage from "./pages/tenant/TenantPaymentsPage";
 import MaintenancePage from "./pages/tenant/MaintenancePage";
+import TenantRentalRequestsPage from "./pages/tenant/TenantRentalRequestsPage";
+import TenantNoticesPage from "./pages/tenant/TenantNoticesPage";
 
 export default function App() {
   const routes = useRoutes([
@@ -62,6 +66,14 @@ export default function App() {
       path: '/dashboard/meetings',
       element: <ProtectedRoute allowedRoles={['landlord']}><MeetingsPage /></ProtectedRoute>
     },
+    {
+      path: '/dashboard/notices',
+      element: <ProtectedRoute allowedRoles={['landlord']}><NoticesPage /></ProtectedRoute>
+    },
+    {
+      path: '/dashboard/register-tenant',
+      element: <ProtectedRoute allowedRoles={['landlord']}><RegisterTenantPage /></ProtectedRoute>
+    },
 
     // Tenant Only Routes
     {
@@ -75,6 +87,14 @@ export default function App() {
     {
       path: '/dashboard/maintenance',
       element: <ProtectedRoute allowedRoles={['tenant']}><MaintenancePage /></ProtectedRoute>
+    },
+    {
+      path: '/dashboard/my-requests',
+      element: <ProtectedRoute allowedRoles={['tenant']}><TenantRentalRequestsPage /></ProtectedRoute>
+    },
+    {
+      path: '/dashboard/my-notices',
+      element: <ProtectedRoute allowedRoles={['tenant']}><TenantNoticesPage /></ProtectedRoute>
     },
 
     { path: '*', element: <NotFound /> },
