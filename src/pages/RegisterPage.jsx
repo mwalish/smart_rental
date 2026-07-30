@@ -209,4 +209,3 @@ export default function RegisterPage() {
     </div>
   )
 }
-// [old code preserved]

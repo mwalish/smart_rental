@@ -297,6 +297,3 @@ export default function LandingPage() {
     </div>
   )
 }
-// import React, { useState } from 'react'
-// import { Link } from 'react-router-dom'
-// [old code preserved below]

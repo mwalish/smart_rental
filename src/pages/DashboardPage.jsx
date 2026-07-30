@@ -6,7 +6,8 @@ import api from '../services/api'
 const LANDLORD_NAV = [
   { to: '/dashboard', label: 'Overview', icon: 'bi-grid-1x2-fill', exact: true },
   { to: '/dashboard/properties', label: 'Properties', icon: 'bi-building-fill' },
-  { to: '/dashboard/tenants', label: 'Maintenance', icon: 'bi-tools' },
+  { to: '/dashboard/tenants', label: 'Tenants', icon: 'bi-people-fill' },
+  { to: '/dashboard/maintenance', label: 'Maintenance', icon: 'bi-tools' },
   { to: '/dashboard/requests', label: 'Rental Requests', icon: 'bi-envelope-fill' },
   { to: '/dashboard/payments', label: 'Payments', icon: 'bi-cash-stack' },
   { to: '/dashboard/leases', label: 'Leases', icon: 'bi-file-earmark-text-fill' },
