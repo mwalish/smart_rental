@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 const NAV_LINKS = [
   { href: '#features', label: 'Features' },
   { href: '#how', label: 'How It Works' },
+  { href: '#houses', label: 'Browse Properties', isRouter: true },
   { href: '#contact', label: 'Contact' },
 ]
 
@@ -53,13 +54,20 @@ export default function LandingPage() {
             <span className="text-xl font-black tracking-tight text-gray-900">Smart<span className="text-teal-600">Rent</span></span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-8">
+<div className="hidden md:flex items-center gap-8">
             {NAV_LINKS.map(l => (
-              <a key={l.href} href={l.href} className="text-sm font-medium text-gray-600 hover:text-teal-600 transition-colors">{l.label}</a>
+              l.isRouter ? (
+                <Link key={l.href} to="/houses" className="text-sm font-medium text-gray-600 hover:text-teal-600 transition-colors">{l.label}</Link>
+              ) : (
+                <a key={l.href} href={l.href} className="text-sm font-medium text-gray-600 hover:text-teal-600 transition-colors">{l.label}</a>
+              )
             ))}
           </div>
 
-          <div className="hidden md:flex items-center gap-3">
+<div className="hidden md:flex items-center gap-3">
+            <Link to="/houses" className="px-5 py-2 text-sm font-semibold text-amber-700 border-2 border-amber-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition-all">
+              <i className="bi bi-search mr-1"></i>Browse Properties
+            </Link>
             <Link to="/login" className="px-5 py-2 text-sm font-semibold text-teal-700 border-2 border-teal-200 rounded-xl hover:border-teal-400 hover:bg-teal-50 transition-all">
               Sign In
             </Link>
@@ -76,11 +84,15 @@ export default function LandingPage() {
         {menuOpen && (
           <div className="md:hidden bg-white border-t border-gray-100 px-6 py-4 flex flex-col gap-4 animate-fade-in">
             {NAV_LINKS.map(l => (
-              <a key={l.href} href={l.href} className="text-sm font-medium text-gray-700 hover:text-teal-600" onClick={() => setMenuOpen(false)}>{l.label}</a>
+              l.isRouter ? (
+                <Link key={l.href} to="/houses" className="text-sm font-medium text-gray-700 hover:text-teal-600" onClick={() => setMenuOpen(false)}>{l.label}</Link>
+              ) : (
+                <a key={l.href} href={l.href} className="text-sm font-medium text-gray-700 hover:text-teal-600" onClick={() => setMenuOpen(false)}>{l.label}</a>
+              )
             ))}
             <div className="flex gap-3 pt-2 border-t border-gray-100">
               <Link to="/login" className="flex-1 text-center py-2 text-sm font-semibold text-teal-700 border-2 border-teal-200 rounded-xl">Sign In</Link>
-              <Link to="/register" className="flex-1 text-center py-2 text-sm font-semibold text-white rounded-xl btn-primary">Get Started</Link>
+              <Link to="/houses/register" className="flex-1 text-center py-2 text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-cyan-400 rounded-xl">Find a Home</Link>
             </div>
           </div>
         )}
@@ -107,9 +119,12 @@ export default function LandingPage() {
               <p className="text-lg text-slate-300 mb-10 max-w-lg mx-auto lg:mx-0 leading-relaxed">
                 Streamline tenant management, track M-Pesa payments, handle maintenance, and grow your rental business — all from one powerful platform.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+<div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Link to="/houses" className="px-8 py-4 text-base font-bold text-white rounded-2xl bg-gradient-to-r from-amber-500 to-orange-400 hover:from-amber-600 hover:to-orange-500 shadow-lg shadow-amber-600/30 transition-all hover:-translate-y-1">
+                  <i className="bi bi-search mr-2"></i>Browse Properties
+                </Link>
                 <Link to="/register" className="px-8 py-4 text-base font-bold text-white rounded-2xl btn-primary">
-                  Start Free Today <i className="bi bi-arrow-right ml-2"></i>
+                  Landlord? Start Free <i className="bi bi-arrow-right ml-2"></i>
                 </Link>
                 <a href="#features" className="px-8 py-4 text-base font-semibold text-white border-2 border-white/20 rounded-2xl hover:bg-white/10 transition-all">
                   <i className="bi bi-play-circle mr-2"></i>See Features
@@ -207,6 +222,78 @@ export default function LandingPage() {
                 <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+{/* ── For Tenants Section ── */}
+      <section className="py-24 px-6 bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl"></div>
+        <div className="relative max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row items-center gap-12">
+            <div className="lg:w-1/2 text-center lg:text-left">
+              <span className="inline-block px-4 py-1.5 bg-amber-500/20 text-amber-300 text-sm font-semibold rounded-full mb-4">
+                FOR TENANTS
+              </span>
+              <h2 className="text-4xl font-black text-white mb-4">Looking for a Place to Rent?</h2>
+              <p className="text-slate-300 text-lg mb-6 max-w-lg leading-relaxed">
+                Browse hundreds of available properties across Kenya. No account needed to explore — just search, find, and apply when you're ready.
+              </p>
+              <div className="space-y-3 mb-8">
+                {[
+                  'Search by location, type, or price range',
+                  'View detailed property info & photos',
+                  'Apply directly to landlords',
+                  'Track your application status',
+                ].map(f => (
+                  <div key={f} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-teal-500/30 flex items-center justify-center shrink-0">
+                      <i className="bi bi-check text-teal-400 text-xs font-bold"></i>
+                    </div>
+                    <span className="text-slate-300 text-sm">{f}</span>
+                  </div>
+                ))}
+              </div>
+              <Link to="/houses" className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-400 text-white font-bold rounded-2xl shadow-lg shadow-amber-600/30 hover:-translate-y-1 transition-all">
+                <i className="bi bi-search"></i> Browse Available Properties
+                <i className="bi bi-arrow-right"></i>
+              </Link>
+            </div>
+            <div className="lg:w-1/2">
+              <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-6 shadow-2xl">
+                {/* Mock property card */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-400 flex items-center justify-center shadow-lg">
+                    <i className="bi bi-building text-white text-xl"></i>
+                  </div>
+                  <div>
+                    <p className="text-white font-bold">Modern 2-Bedroom Apartment</p>
+                    <p className="text-slate-400 text-sm">KSh 25,000/mo · Westlands, Nairobi</p>
+                  </div>
+                </div>
+                <div className="bg-white/10 rounded-2xl p-4 mb-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-300">🛏️ 2 Bedrooms</span>
+                    <span className="text-slate-300">🛁 1 Bathroom</span>
+                    <span className="text-slate-300">📐 850 sq ft</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex -space-x-2">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="w-8 h-8 rounded-full bg-teal-500/40 border-2 border-slate-800 flex items-center justify-center text-white text-xs font-bold">
+                        {['A', 'B', 'K'][i - 1]}
+                      </div>
+                    ))}
+                    <div className="w-8 h-8 rounded-full bg-slate-700 border-2 border-slate-800 flex items-center justify-center text-slate-400 text-xs">
+                      +12
+                    </div>
+                  </div>
+                  <span className="text-teal-400 text-sm font-semibold">✨ Available Now</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

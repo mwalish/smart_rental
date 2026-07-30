@@ -18,12 +18,19 @@ import MeetingsPage from "./pages/landlord/MeetingsPage";
 import NoticesPage from "./pages/landlord/NoticesPage";
 import RegisterTenantPage from "./pages/landlord/RegisterTenantPage";
 
-// Tenant Pages
+// Tenant Pages (Main Portal)
 import MyPropertyPage from "./pages/tenant/MyPropertyPage";
 import TenantPaymentsPage from "./pages/tenant/TenantPaymentsPage";
 import TenantMaintenancePage from "./pages/tenant/MaintenancePage";
 import TenantRentalRequestsPage from "./pages/tenant/TenantRentalRequestsPage";
 import TenantNoticesPage from "./pages/tenant/TenantNoticesPage";
+
+// House-Hunting Pages
+import ListingsPage from "./pages/househunting/ListingsPage";
+import PropertyDetailPage from "./pages/househunting/PropertyDetailPage";
+import TenantRegisterPage from "./pages/househunting/TenantRegisterPage";
+import TenantDashboardPage from "./pages/househunting/TenantDashboardPage";
+import MyRequestsPage from "./pages/househunting/MyRequestsPage";
 
 export default function App() {
   const routes = useRoutes([
@@ -31,6 +38,29 @@ export default function App() {
     { path: '/login', element: <LoginPage /> },
     { path: '/register', element: <RegisterPage /> },
     { path: '/not-authorized', element: <NotAuthorized /> },
+
+    // =====================
+    // HOUSE-HUNTING PORTAL (Public / Tenant-Facing)
+    // =====================
+
+    // Public routes — no login required
+    { path: '/houses', element: <ListingsPage /> },
+    { path: '/houses/register', element: <TenantRegisterPage /> },
+    { path: '/houses/:id', element: <PropertyDetailPage /> },
+
+    // Protected routes — tenant must be logged in
+    {
+      path: '/houses/dashboard',
+      element: <ProtectedRoute allowedRoles={['tenant']}><TenantDashboardPage /></ProtectedRoute>
+    },
+    {
+      path: '/houses/my-requests',
+      element: <ProtectedRoute allowedRoles={['tenant']}><MyRequestsPage /></ProtectedRoute>
+    },
+
+    // =====================
+    // LANDLORD / ADMIN PORTAL (Private)
+    // =====================
 
     // Shared Dashboard
     {
@@ -80,7 +110,7 @@ export default function App() {
       element: <ProtectedRoute allowedRoles={['landlord']}><RegisterTenantPage /></ProtectedRoute>
     },
 
-    // Tenant Only Routes
+    // Tenant Only Routes (Main Portal)
     {
       path: '/dashboard/my-property',
       element: <ProtectedRoute allowedRoles={['tenant']}><MyPropertyPage /></ProtectedRoute>

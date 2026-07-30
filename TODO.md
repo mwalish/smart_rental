@@ -1,26 +1,21 @@
-# Redesign TODO
+# House-Hunting Portal Implementation Plan
 
-## Step 1: Fix DashboardPage navigation bug
-- Fix LANDLORD_NAV: change `/dashboard/tenants` → `/dashboard/maintenance` for "Maintenance" link
-- Add proper "Tenants" link with correct path `/dashboard/tenants`
+## Steps
 
-## Step 2: Create proper Tenants page for landlords
-- Build `src/pages/landlord/TenantsPage.jsx` with tenant listing, search, and management
+### Phase 1: Services
+- [x] 1. Create `src/services/houseHuntingService.js` — API calls for public endpoints
 
-## Step 3: Clean up App.css (remove Vite boilerplate)
-- Remove unused `.counter`, `.hero`, `#center`, `#next-steps`, `#spacer`, `.ticks` styles
+### Phase 2: Pages
+- [x] 2. Create `src/pages/househunting/ListingsPage.jsx` — Browse public available properties
+- [x] 3. Create `src/pages/househunting/PropertyDetailPage.jsx` — Property detail + apply
+- [x] 4. Create `src/pages/househunting/TenantRegisterPage.jsx` — Simplified tenant self-registration
+- [x] 5. Create `src/pages/househunting/TenantDashboardPage.jsx` — Tenant house-hunting dashboard
+- [x] 6. Create `src/pages/househunting/MyRequestsPage.jsx` — Track rental applications
 
-## Step 4: Clean up commented-out code in multiple files
-- App.jsx
-- AuthContext.jsx
-- dashboardService.js
-- LandingPage.jsx
-- LoginPage.jsx
-- RegisterPage.jsx
+### Phase 3: Route Integration
+- [x] 7. Update `src/App.jsx` — Add house-hunting routes under `/houses/*`
+- [x] 8. Update `src/pages/LandingPage.jsx` — Add "Browse Properties" CTA + house-hunting section
 
-## Step 5: Remove old HTML prototype
-- Delete `components/index.html`
-
-## Step 6: Polish index.css
-- Add subtle refinements for a polished look
+### Phase 4: Verification
+- [x] 9. Verify build compiles and routes work
 
