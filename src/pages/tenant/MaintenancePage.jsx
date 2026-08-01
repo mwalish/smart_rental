@@ -7,8 +7,7 @@ const FILTERS = [
   { key: 'ALL', label: 'All' },
   { key: 'PENDING', label: 'Pending' },
   { key: 'IN_PROGRESS', label: 'In Progress' },
-  { key: 'RESOLVED', label: 'Resolved' },
-  { key: 'CANCELLED', label: 'Cancelled' },
+  { key: 'COMPLETED', label: 'Completed' },
 ]
 const EMPTY = { property: '', issue: '', description: '' }
 

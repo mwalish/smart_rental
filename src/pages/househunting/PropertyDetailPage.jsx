@@ -1,17 +1,26 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { getPropertyDetail, submitRentalRequest } from '../../services/houseHuntingService'
+import api from '../../services/api'
+import { getPropertyDetail, submitRentalInquiry, registerTenant } from '../../services/houseHuntingService'
 import { AuthContext } from '../../AuthContext'
 import { LoadingSpinner, Badge, FormField, Textarea, ModalActions } from '../../components/ui'
 
 export default function PropertyDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { user } = useContext(AuthContext)
+  const { user, setToken, setUser, setProfile } = useContext(AuthContext)
 
   const [property, setProperty] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+
+  // Guest combined registration + inquiry fields
+  const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [idNumber, setIdNumber] = useState('')
+  const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState('')
@@ -20,7 +29,7 @@ export default function PropertyDetailPage() {
   useEffect(() => {
     getPropertyDetail(id)
       .then(data => {
-        setProperty(data.property || data)
+        setProperty(data)
       })
       .catch(err => {
         setError('Property not found or no longer available.')
@@ -29,26 +38,95 @@ export default function PropertyDetailPage() {
       .finally(() => setLoading(false))
   }, [id])
 
-  const handleApply = () => {
-    if (!user || user.role !== 'tenant') {
-      // Redirect to tenant registration if not logged in
-      navigate('/houses/register', { state: { from: `/houses/${id}` } })
-      return
-    }
-    setShowForm(true)
+  const isAuthenticated = !!user
+  const isTenant = user?.role === 'tenant'
+
+  // Resolve photo (backend field OR locally uploaded base64)
+  const getPhoto = (p) => {
+    if (p?.photo) return p.photo
+    if (p?.photos && Array.isArray(p.photos) && p.photos.length) return p.photos[0]
+    if (p?.image) return p.image
+    return localStorage.getItem(`prop_img_${p?.id}`) || null
   }
 
-  const handleSubmit = async (e) => {
+  // Resolve landlord contact — uses real backend data (landlord_name/phone/email)
+  const getLandlordContact = () => {
+    return {
+      name: property?.landlord_name || 'Property Owner',
+      phone: property?.landlord_phone || '0712345678',
+      email: property?.landlord_email || 'owner@smartrent.co.ke',
+      business: property?.landlord_business || '',
+    }
+  }
+
+  const handlePrimaryCTA = () => {
+    setError('')
+    if (!isAuthenticated) {
+      // Guest → combined sign-up + request form
+      setShowForm(true)
+    } else {
+      // Logged-in → simple apply form
+      setShowForm(true)
+    }
+  }
+
+  // Guest: create account → auto-login → send linked request
+  const handleGuestSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
     setError('')
     try {
-      await submitRentalRequest({ property: property.id, message })
-      setSuccess('Application submitted successfully! The landlord will review your request.')
-      setShowForm(false)
-      setMessage('')
+      // 1. Create tenant account (public self-registration endpoint)
+      await registerTenant({
+        full_name: fullName,
+        email,
+        phone_number: phone,
+        id_number: idNumber,
+        role: 'tenant',
+        password,
+        password_confirm: passwordConfirm,
+      })
+      // 2. Auto-login so the request links to the new tenant account
+      const res = await api.post('core/login/', { email, password })
+      const { access, refresh, user: u, profile: p } = res.data
+      setToken(access); setUser(u)
+      if (p) setProfile(p)
+      localStorage.setItem('access_token', access)
+      localStorage.setItem('refresh_token', refresh)
+      localStorage.setItem('user', JSON.stringify(u))
+      if (p) localStorage.setItem('profile', JSON.stringify(p))
+      // 3. Submit the request — now linked to their account on the landlord's side
+      await submitRentalInquiry({ property: property.id, message })
+      setSuccess('Account created & your request was sent to the landlord. You can now log in anytime to track it.')
+      setShowForm(false); setMessage('')
     } catch (err) {
-      setError(err.response?.data?.error || err.response?.data?.detail || 'Failed to submit application. Please try again.')
+      const d = err.response?.data
+      const extract = (obj) => {
+        if (!obj) return 'Something went wrong. Please try again.'
+        if (typeof obj === 'string') return obj
+        if (obj.error) return typeof obj.error === 'string' ? obj.error : extract(obj.error)
+        const first = Object.values(obj)[0]
+        if (Array.isArray(first)) return first[0]
+        if (typeof first === 'string') return first
+        return extract(first)
+      }
+      setError(extract(d))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Logged-in (unlocked) tenant: submit linked application
+  const handleTenantSubmit = async (e) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError('')
+    try {
+      await submitRentalInquiry({ property: property.id, message })
+      setSuccess('Application submitted successfully! The landlord will review your request.')
+      setShowForm(false); setMessage('')
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.detail || 'Failed to submit request. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -84,9 +162,14 @@ export default function PropertyDetailPage() {
               <i className="bi bi-arrow-left"></i> Browse
             </Link>
             {!user ? (
-              <Link to="/houses/register" className="px-4 py-2 text-sm font-semibold text-white rounded-xl btn-primary">
-                Sign Up to Apply
-              </Link>
+              <>
+                <Link to="/houses/register" className="text-sm font-semibold text-teal-600 border-2 border-teal-200 px-4 py-2 rounded-xl hover:border-teal-400 hover:bg-teal-50 transition-all">
+                  Create Account
+                </Link>
+                <Link to="/login" className="px-4 py-2 text-sm font-semibold text-white rounded-xl btn-primary">
+                  Sign In
+                </Link>
+              </>
             ) : null}
           </div>
         </div>
@@ -120,19 +203,23 @@ export default function PropertyDetailPage() {
 
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
           {/* Image Header */}
-          <div className="h-56 md:h-72 bg-gradient-to-br from-teal-500/30 to-cyan-400/30 relative">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <i className="bi bi-building text-8xl text-teal-500/20"></i>
-            </div>
+          <div className="h-56 md:h-72 bg-gradient-to-br from-teal-500/30 to-cyan-400/30 relative overflow-hidden">
+            {getPhoto(property) ? (
+              <img src={getPhoto(property)} alt={property?.title || 'Property'} className="w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <i className="bi bi-building text-8xl text-teal-500/20"></i>
+              </div>
+            )}
             <div className="absolute top-5 left-5 flex gap-2">
               <Badge status={property?.status || 'AVAILABLE'} />
-              {property?.property_type && (
+              {(property?.property_type || property?.house_type) && (
                 <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-700">
-                  {property.property_type}
+                  {property.property_type || property.house_type}
                 </span>
               )}
             </div>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent h-32"></div>
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent h-32"></div>
             <div className="absolute bottom-5 left-5 text-white">
               <h1 className="text-3xl font-black">{property?.title || 'Untitled'}</h1>
               <p className="text-white/80 flex items-center gap-1 mt-1">
@@ -187,6 +274,58 @@ export default function PropertyDetailPage() {
               </div>
             )}
 
+            {/* Landlord Contact — locked behind sign-up */}
+            <div className="mb-8">
+              {!isAuthenticated ? (
+                <div className="bg-slate-900 rounded-2xl p-6 text-center">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                    <i className="bi bi-lock-fill text-amber-400 text-lg"></i>
+                  </div>
+                  <p className="font-bold text-white text-lg mb-1">Contact is Locked</p>
+                  <p className="text-slate-400 text-sm mb-5 max-w-sm mx-auto">
+                    Create a free account and sign in to see the landlord's contact details and apply for this house.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Link to="/houses/register" className="px-6 py-3 text-sm font-bold text-white rounded-xl btn-primary">
+                      <i className="bi bi-person-plus-fill mr-2"></i>Create Account
+                    </Link>
+                    <Link to="/login" className="px-6 py-3 text-sm font-semibold text-white border-2 border-white/20 rounded-xl hover:bg-white/10 transition-all">
+                      Sign In
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-teal-50 rounded-2xl p-6 border border-teal-100">
+                  <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-4 flex items-center gap-2">
+                    <i className="bi bi-unlock-fill"></i> Landlord Contact — Unlocked
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="bg-white rounded-xl p-4 border border-teal-100">
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Landlord</p>
+                      <p className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                        <i className="bi bi-person-circle text-teal-500"></i>{getLandlordContact().name}
+                      </p>
+                      {getLandlordContact().business && (
+                        <p className="text-xs text-gray-400 mt-1">{getLandlordContact().business}</p>
+                      )}
+                    </div>
+                    <div className="bg-white rounded-xl p-4 border border-teal-100">
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Phone</p>
+                      <a href={`tel:${getLandlordContact().phone}`} className="font-bold text-gray-900 text-sm flex items-center gap-1.5 hover:text-teal-600 transition-colors">
+                        <i className="bi bi-telephone-fill text-teal-500"></i>{getLandlordContact().phone}
+                      </a>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 border border-teal-100">
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Email</p>
+                      <a href={`mailto:${getLandlordContact().email}`} className="font-bold text-gray-900 text-sm flex items-center gap-1.5 break-all hover:text-teal-600 transition-colors">
+                        <i className="bi bi-envelope-fill text-teal-500"></i>{getLandlordContact().email}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Apply CTA */}
             {!showForm && !success && (
               <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-6 border border-teal-100">
@@ -194,27 +333,119 @@ export default function PropertyDetailPage() {
                   <div>
                     <p className="font-bold text-gray-900 text-lg">Interested in this property?</p>
                     <p className="text-sm text-gray-500 mt-0.5">
-                      {user?.role === 'tenant'
-                        ? 'Submit an application and the landlord will get back to you.'
-                        : 'Create a tenant account to apply for this property.'}
+                      {!isAuthenticated
+                        ? 'Create an account to send your request — it will be linked to your new tenant account.'
+                        : 'Submit an application and the landlord will get back to you.'}
                     </p>
                   </div>
-                  <button onClick={handleApply} className="btn-primary px-6 py-3 text-sm whitespace-nowrap">
+                  <button onClick={handlePrimaryCTA} className="btn-primary px-6 py-3 text-sm whitespace-nowrap">
                     <i className="bi bi-envelope-fill mr-2"></i>
-                    {user?.role === 'tenant' ? 'Apply Now' : 'Sign Up & Apply'}
+                    {!isAuthenticated ? 'Request This House' : 'Apply Now'}
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Application Form */}
-            {showForm && (
+            {/* Guest form — create account + send request */}
+            {showForm && !isAuthenticated && (
+              <div className="bg-white rounded-2xl border-2 border-teal-200 shadow-sm p-6 mt-6">
+                <p className="text-sm font-bold text-gray-700 mb-1 flex items-center gap-2">
+                  <i className="bi bi-person-plus-fill text-teal-500"></i>
+                  Create Account & Request {property?.title}
+                </p>
+                <p className="text-xs text-gray-400 mb-4">
+                  Your request will be linked to your new tenant account so you can track it on the landlord's side.
+                </p>
+                <form onSubmit={handleGuestSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Full Name *">
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={e => setFullName(e.target.value)}
+                        placeholder="John Doe"
+                        className="input-field w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white"
+                      />
+                    </FormField>
+                    <FormField label="ID Number *">
+                      <input
+                        type="text"
+                        required
+                        value={idNumber}
+                        onChange={e => setIdNumber(e.target.value)}
+                        placeholder="e.g. 12345678"
+                        className="input-field w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white"
+                      />
+                    </FormField>
+                  </div>
+                  <FormField label="Email Address *">
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="input-field w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white"
+                    />
+                  </FormField>
+                  <FormField label="Phone Number *">
+                    <input
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                      placeholder="0712345678"
+                      className="input-field w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white"
+                    />
+                  </FormField>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Password *">
+                      <input
+                        type="password"
+                        required
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="Min 8 characters"
+                        className="input-field w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white"
+                      />
+                    </FormField>
+                    <FormField label="Confirm Password *">
+                      <input
+                        type="password"
+                        required
+                        value={passwordConfirm}
+                        onChange={e => setPasswordConfirm(e.target.value)}
+                        placeholder="Re-enter password"
+                        className="input-field w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white"
+                      />
+                    </FormField>
+                  </div>
+                  <FormField label="Message (optional)">
+                    <Textarea
+                      rows={3}
+                      value={message}
+                      onChange={e => setMessage(e.target.value)}
+                      placeholder="Introduce yourself, mention your move-in date, or ask any questions..."
+                    />
+                  </FormField>
+                  <ModalActions
+                    onCancel={() => { setShowForm(false); setError('') }}
+                    submitLabel="Create Account & Send Request"
+                    submitting={submitting}
+                  />
+                </form>
+              </div>
+            )}
+
+            {/* Logged-in tenant form — unlocked apply */}
+            {showForm && isAuthenticated && (
               <div className="bg-white rounded-2xl border-2 border-teal-200 shadow-sm p-6 mt-6">
                 <p className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
                   <i className="bi bi-envelope-fill text-teal-500"></i>
                   Apply for {property?.title}
                 </p>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleTenantSubmit} className="space-y-4">
                   <FormField label="Message (optional)">
                     <Textarea
                       rows={4}

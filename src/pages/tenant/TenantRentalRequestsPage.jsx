@@ -17,9 +17,9 @@ export default function TenantRentalRequestsPage() {
 
   const load = async () => {
     try {
-      const [rr, pr] = await Promise.all([api.get('core/rental-requests/'), api.get('core/properties/available/')])
+      const [rr, pr] = await Promise.all([api.get('core/rental-requests/'), api.get('properties/available/')])
       setRequests(rr.data.rental_requests || [])
-      setProperties(pr.data || [])
+      setProperties(Array.isArray(pr.data) ? pr.data : [])
     } catch (e) { console.error(e) } finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])

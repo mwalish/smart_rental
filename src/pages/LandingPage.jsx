@@ -18,10 +18,10 @@ const FEATURES = [
 ]
 
 const STEPS = [
-  { num: '01', title: 'Create Your Account', desc: 'Sign up as a landlord in seconds. No credit card required.' },
-  { num: '02', title: 'Add Your Properties', desc: 'List your units with photos, rent, and details.' },
-  { num: '03', title: 'Invite Tenants', desc: 'Register tenants directly from your dashboard.' },
-  { num: '04', title: 'Manage Everything', desc: 'Payments, maintenance, notices — all in one place.' },
+  { num: '01', title: 'Browse Houses', desc: 'Search available rental houses by location, type, and price — free, no account needed.' },
+  { num: '02', title: 'Create Account', desc: 'Sign up as a tenant in under a minute with your email and phone.' },
+  { num: '03', title: 'Log In & View Details', desc: 'Sign in to see full property info and landlord contact.' },
+  { num: '04', title: 'Apply & Move In', desc: 'Contact landlords directly, apply, and track your requests.' },
 ]
 
 const STATS = [
@@ -64,15 +64,15 @@ export default function LandingPage() {
             ))}
           </div>
 
-<div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3">
             <Link to="/houses" className="px-5 py-2 text-sm font-semibold text-amber-700 border-2 border-amber-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition-all">
               <i className="bi bi-search mr-1"></i>Browse Properties
             </Link>
-            <Link to="/login" className="px-5 py-2 text-sm font-semibold text-teal-700 border-2 border-teal-200 rounded-xl hover:border-teal-400 hover:bg-teal-50 transition-all">
-              Sign In
+            <Link to="/houses/register" className="px-5 py-2 text-sm font-semibold text-teal-700 border-2 border-teal-200 rounded-xl hover:border-teal-400 hover:bg-teal-50 transition-all">
+              <i className="bi bi-person-plus mr-1"></i>Create Account
             </Link>
-            <Link to="/register" className="px-5 py-2 text-sm font-semibold text-white rounded-xl btn-primary">
-              Get Started Free
+            <Link to="/login" className="px-5 py-2 text-sm font-semibold text-white rounded-xl btn-primary">
+              Sign In
             </Link>
           </div>
 
@@ -91,8 +91,8 @@ export default function LandingPage() {
               )
             ))}
             <div className="flex gap-3 pt-2 border-t border-gray-100">
-              <Link to="/login" className="flex-1 text-center py-2 text-sm font-semibold text-teal-700 border-2 border-teal-200 rounded-xl">Sign In</Link>
-              <Link to="/houses/register" className="flex-1 text-center py-2 text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-cyan-400 rounded-xl">Find a Home</Link>
+              <Link to="/houses/register" className="flex-1 text-center py-2 text-sm font-semibold text-teal-700 border-2 border-teal-200 rounded-xl">Create Account</Link>
+              <Link to="/login" className="flex-1 text-center py-2 text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-cyan-400 rounded-xl">Sign In</Link>
             </div>
           </div>
         )}
@@ -117,14 +117,14 @@ export default function LandingPage() {
                 <span className="gradient-text">The Smart Way</span>
               </h1>
               <p className="text-lg text-slate-300 mb-10 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-                Streamline tenant management, track M-Pesa payments, handle maintenance, and grow your rental business — all from one powerful platform.
+                Browse available rental houses across Kenya. Create a free account and sign in to unlock full property details and contact landlords directly.
               </p>
 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link to="/houses" className="px-8 py-4 text-base font-bold text-white rounded-2xl bg-gradient-to-r from-amber-500 to-orange-400 hover:from-amber-600 hover:to-orange-500 shadow-lg shadow-amber-600/30 transition-all hover:-translate-y-1">
-                  <i className="bi bi-search mr-2"></i>Browse Properties
+                  <i className="bi bi-search mr-2"></i>Browse Houses
                 </Link>
-                <Link to="/register" className="px-8 py-4 text-base font-bold text-white rounded-2xl btn-primary">
-                  Landlord? Start Free <i className="bi bi-arrow-right ml-2"></i>
+                <Link to="/houses/register" className="px-8 py-4 text-base font-bold text-white rounded-2xl btn-primary">
+                  Create Account <i className="bi bi-arrow-right ml-2"></i>
                 </Link>
                 <a href="#features" className="px-8 py-4 text-base font-semibold text-white border-2 border-white/20 rounded-2xl hover:bg-white/10 transition-all">
                   <i className="bi bi-play-circle mr-2"></i>See Features
@@ -238,14 +238,14 @@ export default function LandingPage() {
               </span>
               <h2 className="text-4xl font-black text-white mb-4">Looking for a Place to Rent?</h2>
               <p className="text-slate-300 text-lg mb-6 max-w-lg leading-relaxed">
-                Browse hundreds of available properties across Kenya. No account needed to explore — just search, find, and apply when you're ready.
+                Browse hundreds of available houses across Kenya for free. When you're committed, create an account and sign in to unlock full details and contact landlords directly.
               </p>
               <div className="space-y-3 mb-8">
                 {[
                   'Search by location, type, or price range',
-                  'View detailed property info & photos',
-                  'Apply directly to landlords',
-                  'Track your application status',
+                  'Create a free tenant account',
+                  'Log in to view landlord contact',
+                  "Apply & track requests on the landlord's side",
                 ].map(f => (
                   <div key={f} className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-full bg-teal-500/30 flex items-center justify-center shrink-0">
@@ -256,7 +256,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <Link to="/houses" className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-400 text-white font-bold rounded-2xl shadow-lg shadow-amber-600/30 hover:-translate-y-1 transition-all">
-                <i className="bi bi-search"></i> Browse Available Properties
+                <i className="bi bi-search"></i> Browse Available Houses
                 <i className="bi bi-arrow-right"></i>
               </Link>
             </div>
@@ -304,7 +304,7 @@ export default function LandingPage() {
           <div className="text-center mb-16">
             <span className="inline-block px-4 py-1.5 bg-violet-100 text-violet-700 text-sm font-semibold rounded-full mb-4">HOW IT WORKS</span>
             <h2 className="text-4xl font-black text-gray-900 mb-4">Up & Running in Minutes</h2>
-            <p className="text-gray-500 max-w-xl mx-auto text-lg">No technical skills needed. Just sign up and start managing.</p>
+            <p className="text-gray-500 max-w-xl mx-auto text-lg">No technical skills needed. Just sign in and start managing.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {STEPS.map((s, i) => (
@@ -330,11 +330,16 @@ export default function LandingPage() {
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full translate-x-1/3 translate-y-1/3"></div>
         </div>
         <div className="relative max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl font-black text-white mb-4">Ready to Simplify Your Rentals?</h2>
-          <p className="text-teal-100 text-lg mb-8">Join hundreds of landlords already using SmartRent to save time and grow their income.</p>
-          <Link to="/register" className="inline-block px-10 py-4 bg-white text-teal-700 font-bold text-base rounded-2xl hover:shadow-2xl hover:-translate-y-1 transition-all">
-            Create Free Account <i className="bi bi-arrow-right ml-2"></i>
-          </Link>
+          <h2 className="text-4xl font-black text-white mb-4">Ready to Find Your Next Home?</h2>
+          <p className="text-teal-100 text-lg mb-8">Browse houses for free — create an account and log in to see full details & landlord contact.</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/houses" className="inline-block px-10 py-4 bg-white text-teal-700 font-bold text-base rounded-2xl hover:shadow-2xl hover:-translate-y-1 transition-all">
+              Browse Houses <i className="bi bi-arrow-right ml-2"></i>
+            </Link>
+            <Link to="/houses/register" className="inline-block px-10 py-4 bg-amber-500 text-white font-bold text-base rounded-2xl hover:shadow-2xl hover:-translate-y-1 transition-all">
+              Create Account
+            </Link>
+          </div>
         </div>
       </section>
 

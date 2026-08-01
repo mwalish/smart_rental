@@ -11,6 +11,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // tenants belong to house-hunting portal, not the main dashboard
+    if (user.role === 'tenant') return <Navigate to="/houses/dashboard" replace />
     return <Navigate to="/not-authorized" replace />
   }
 

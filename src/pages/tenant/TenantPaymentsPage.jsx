@@ -4,7 +4,7 @@ import { AuthContext } from '../../AuthContext'
 import { PageHeader, FilterTabs, Badge, EmptyState, LoadingSpinner, Table, Tr, Td, FormField, Input, Select, ModalActions } from '../../components/ui'
 
 const FILTERS = [{ key: 'ALL', label: 'All' }, { key: 'PENDING', label: 'Pending' }, { key: 'COMPLETED', label: 'Completed' }, { key: 'FAILED', label: 'Failed' }]
-const EMPTY = { lease: '', amount: '', payment_date: '', method: 'M-Pesa' }
+const EMPTY = { lease: '', amount: '', method: 'M-Pesa' }
 
 export default function TenantPaymentsPage() {
   const { profile } = useContext(AuthContext)
@@ -33,7 +33,7 @@ export default function TenantPaymentsPage() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const res = await api.post('core/payments/', { ...form, payment_date: new Date(form.payment_date).toISOString() })
+      const res = await api.post('core/payments/', { lease: form.lease, amount: form.amount, method: form.method })
       alert(res.data.message || 'Payment submitted!')
       setShowForm(false); setForm(EMPTY); load()
     } catch (err) { alert(err.response?.data?.error || 'Failed to submit') }
@@ -101,7 +101,6 @@ export default function TenantPaymentsPage() {
             )}
             <div className="grid grid-cols-2 gap-4">
               <FormField label="Amount (KSh)"><Input type="number" value={form.amount} onChange={set('amount')} required placeholder="0" /></FormField>
-              <FormField label="Payment Date"><Input type="date" value={form.payment_date} onChange={set('payment_date')} required /></FormField>
             </div>
             <FormField label="Payment Method">
               <select value={form.method} onChange={set('method')} className="input-field w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50">
@@ -126,7 +125,7 @@ export default function TenantPaymentsPage() {
             <Tr key={p.id}>
               <Td className="font-semibold text-gray-900">{p.property_title || '—'}</Td>
               <Td className="font-bold text-gray-900">KSh {Number(p.amount).toLocaleString()}</Td>
-              <Td className="text-gray-400 whitespace-nowrap">{p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '—'}</Td>
+              <Td className="text-gray-400 whitespace-nowrap">{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</Td>
               <Td>
                 <span className="flex items-center gap-1.5 text-gray-600">
                   {p.method === 'M-Pesa' && <i className="bi bi-phone text-green-600 text-xs"></i>}

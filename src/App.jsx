@@ -1,7 +1,6 @@
 import { useRoutes } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
 import NotFound from "./pages/NotFound";
 import NotAuthorized from "./pages/NotAuthorized";
 import ProtectedRoute from "./ProtectedRoute";
@@ -25,18 +24,26 @@ import TenantMaintenancePage from "./pages/tenant/MaintenancePage";
 import TenantRentalRequestsPage from "./pages/tenant/TenantRentalRequestsPage";
 import TenantNoticesPage from "./pages/tenant/TenantNoticesPage";
 
+// Admin Pages
+import AdminOverviewPage from './pages/admin/AdminOverviewPage'
+import AdminUsersPage from './pages/admin/AdminUsersPage'
+import AdminCreateLandlordPage from './pages/admin/AdminCreateLandlordPage'
+import AdminLeasesPage from './pages/admin/AdminLeasesPage'
+import AdminPaymentsPage from './pages/admin/AdminPaymentsPage'
+import AdminMaintenancePage from './pages/admin/AdminMaintenancePage'
+import AdminNoticesPage from './pages/admin/AdminNoticesPage'
+
 // House-Hunting Pages
 import ListingsPage from "./pages/househunting/ListingsPage";
 import PropertyDetailPage from "./pages/househunting/PropertyDetailPage";
-import TenantRegisterPage from "./pages/househunting/TenantRegisterPage";
 import TenantDashboardPage from "./pages/househunting/TenantDashboardPage";
 import MyRequestsPage from "./pages/househunting/MyRequestsPage";
+import RegisterPage from "./pages/househunting/RegisterPage";
 
 export default function App() {
   const routes = useRoutes([
     { path: '/', element: <LandingPage /> },
     { path: '/login', element: <LoginPage /> },
-    { path: '/register', element: <RegisterPage /> },
     { path: '/not-authorized', element: <NotAuthorized /> },
 
     // =====================
@@ -45,7 +52,7 @@ export default function App() {
 
     // Public routes — no login required
     { path: '/houses', element: <ListingsPage /> },
-    { path: '/houses/register', element: <TenantRegisterPage /> },
+    { path: '/houses/register', element: <RegisterPage /> },
     { path: '/houses/:id', element: <PropertyDetailPage /> },
 
     // Protected routes — tenant must be logged in
@@ -66,7 +73,7 @@ export default function App() {
     {
       path: '/dashboard',
       element: (
-        <ProtectedRoute allowedRoles={['landlord', 'tenant', 'admin']}>
+        <ProtectedRoute allowedRoles={['landlord', 'admin']}>
           <DashboardPage />
         </ProtectedRoute>
       )
@@ -130,6 +137,32 @@ export default function App() {
     {
       path: '/dashboard/my-notices',
       element: <ProtectedRoute allowedRoles={['tenant']}><TenantNoticesPage /></ProtectedRoute>
+    },
+
+    // Admin Only Routes
+    {
+      path: '/dashboard/admin/users',
+      element: <ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute>
+    },
+    {
+      path: '/dashboard/admin/create-landlord',
+      element: <ProtectedRoute allowedRoles={['admin']}><AdminCreateLandlordPage /></ProtectedRoute>
+    },
+    {
+      path: '/dashboard/admin/leases',
+      element: <ProtectedRoute allowedRoles={['admin']}><AdminLeasesPage /></ProtectedRoute>
+    },
+    {
+      path: '/dashboard/admin/payments',
+      element: <ProtectedRoute allowedRoles={['admin']}><AdminPaymentsPage /></ProtectedRoute>
+    },
+    {
+      path: '/dashboard/admin/maintenance',
+      element: <ProtectedRoute allowedRoles={['admin']}><AdminMaintenancePage /></ProtectedRoute>
+    },
+    {
+      path: '/dashboard/admin/notices',
+      element: <ProtectedRoute allowedRoles={['admin']}><AdminNoticesPage /></ProtectedRoute>
     },
 
     { path: '*', element: <NotFound /> },

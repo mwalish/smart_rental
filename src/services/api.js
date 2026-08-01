@@ -12,9 +12,9 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("access_token");
     const isPublicRoute = 
-      config.url.includes("core/login/") || 
-      config.url.includes("core/refresh/") || 
-      config.url.includes("core/register/");
+      config.url.includes("login") || 
+      // config.url.includes("refresh/") || 
+      config.url.includes("register/");
 
     if (token && !isPublicRoute) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -47,7 +47,7 @@ api.interceptors.response.use(
     // Skip refresh logic for auth endpoints
     if (error.response?.status !== 401 || originalRequest._retry ||
         originalRequest.url.includes("core/login/") ||
-        originalRequest.url.includes("core/refresh/")) {
+        originalRequest.url.includes("core/token/refresh/")) {
       return Promise.reject(error);
     }
 
@@ -72,7 +72,7 @@ api.interceptors.response.use(
 
     try {
       // Call refresh endpoint to get new access token
-      const { data } = await api.post("core/refresh/", { refresh: refreshToken });
+      const { data } = await api.post("core/token/refresh/", { refresh: refreshToken });
       localStorage.setItem("access_token", data.access);
       api.defaults.headers.common["Authorization"] = `Bearer ${data.access}`;
       processQueue(null, data.access);

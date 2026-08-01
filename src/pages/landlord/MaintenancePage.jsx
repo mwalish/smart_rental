@@ -6,8 +6,7 @@ const FILTERS = [
   { key: 'ALL', label: 'All' },
   { key: 'PENDING', label: 'Pending' },
   { key: 'IN_PROGRESS', label: 'In Progress' },
-  { key: 'RESOLVED', label: 'Resolved' },
-  { key: 'CANCELLED', label: 'Cancelled' },
+  { key: 'COMPLETED', label: 'Completed' },
 ]
 
 export default function LandlordMaintenancePage() {
@@ -29,7 +28,6 @@ export default function LandlordMaintenancePage() {
       setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r))
     } catch (err) { alert(err.response?.data?.error || 'Failed to update') }
   }
-
   const deleteReq = async (id) => {
     if (!window.confirm('Delete this request?')) return
     try { await api.delete(`core/maintenance/${id}/`); setRequests(prev => prev.filter(r => r.id !== id)) }
@@ -74,9 +72,8 @@ export default function LandlordMaintenancePage() {
               <Td><Badge status={r.status || 'pending'} /></Td>
               <Td>
                 <div className="flex gap-1.5 flex-wrap">
-                  {r.status?.toLowerCase() !== 'in_progress' && <ActionBtn variant="blue" onClick={() => updateStatus(r.id, 'in_progress')}>Start</ActionBtn>}
-                  {r.status?.toLowerCase() !== 'resolved' && <ActionBtn variant="green" onClick={() => updateStatus(r.id, 'resolved')}>Resolve</ActionBtn>}
-                  {r.status?.toLowerCase() !== 'cancelled' && <ActionBtn onClick={() => updateStatus(r.id, 'cancelled')}>Cancel</ActionBtn>}
+                  {r.status !== 'IN_PROGRESS' && r.status !== 'COMPLETED' && <ActionBtn variant="blue" onClick={() => updateStatus(r.id, 'IN_PROGRESS')}>Start</ActionBtn>}
+                  {r.status !== 'COMPLETED' && <ActionBtn variant="green" onClick={() => updateStatus(r.id, 'COMPLETED')}>Complete</ActionBtn>}
                   <ActionBtn variant="red" onClick={() => deleteReq(r.id)}>Delete</ActionBtn>
                 </div>
               </Td>

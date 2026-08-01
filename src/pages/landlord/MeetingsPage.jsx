@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
 import { PageHeader, PrimaryBtn, Badge, EmptyState, LoadingSpinner, Modal, FormField, Input, Select, Textarea, ModalActions, Table, Tr, Td, ActionBtn } from '../../components/ui'
 
-const EMPTY = { title: '', property: '', date_time: '', notes: '', status: 'SCHEDULED' }
+const EMPTY = { property: '', tenant: '', date_time: '', notes: '', status: 'SCHEDULED' }
 
 export default function MeetingsPage() {
   const [meetings, setMeetings] = useState([])
   const [properties, setProperties] = useState([])
+  const [tenants, setTenants] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -14,23 +15,28 @@ export default function MeetingsPage() {
 
   const load = async () => {
     try {
-      const [mr, pr] = await Promise.all([api.get('landlord/meetings/'), api.get('landlord/properties/')])
+      const [mr, pr, tr] = await Promise.all([api.get('landlord/meetings/'), api.get('landlord/properties/'), api.get('landlord/tenants/')])
       setMeetings(mr.data.meetings || mr.data)
       setProperties(pr.data)
+      setTenants(tr.data.tenants || tr.data || [])
     } catch (e) { console.error(e) } finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])
 
   const openForm = (m = null) => {
     setEditing(m)
-    setForm(m ? { title: m.title || '', property: m.property?.id || m.property || '', date_time: m.date_time ? new Date(m.date_time).toISOString().slice(0, 16) : '', notes: m.notes || '', status: m.status || 'SCHEDULED' } : EMPTY)
+    setForm(m ? { property: m.property?.id || m.property || '', tenant: m.tenant?.id || m.tenant || '', date_time: m.date_time ? new Date(m.date_time).toISOString().slice(0, 16) : '', notes: m.notes || '', status: m.status || 'SCHEDULED' } : EMPTY)
     setShowModal(true)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
+      // Guard against empty datetime — required field but avoid RangeError on invalid input
+      if (!form.date_time) { alert('Please select a date and time.'); return }
       const payload = { ...form, date_time: new Date(form.date_time).toISOString() }
+      // Empty tenant (optional) → send null so the FK isn't invalid
+      if (!payload.tenant) payload.tenant = null
       editing ? await api.put(`landlord/meetings/${editing.id}/`, payload) : await api.post('landlord/meetings/', payload)
       setShowModal(false); load()
     } catch (err) { alert(err.response?.data?.message || err.response?.data?.error || 'Failed to save') }
@@ -57,11 +63,11 @@ export default function MeetingsPage() {
       {loading ? <LoadingSpinner /> : meetings.length === 0 ? (
         <EmptyState icon="bi-calendar2-check" message="No meetings scheduled yet." />
       ) : (
-        <Table headers={['Title', 'Property', 'Date & Time', 'Status', 'Actions']}>
+        <Table headers={['Property', 'Tenant', 'Date & Time', 'Status', 'Actions']}>
           {meetings.map(m => (
             <Tr key={m.id}>
-              <Td className="font-semibold text-gray-900">{m.title || 'Property Viewing'}</Td>
-              <Td className="text-gray-500">{m.property?.title || m.property_title || '—'}</Td>
+              <Td className="font-semibold text-gray-900">{m.property?.title || m.property_title || '—'}</Td>
+              <Td className="text-gray-500">{m.tenant?.full_name || m.tenant_name || '—'}</Td>
               <Td className="whitespace-nowrap text-gray-600">
                 <div className="flex items-center gap-1.5">
                   <i className="bi bi-calendar2 text-teal-500 text-xs"></i>
@@ -83,11 +89,16 @@ export default function MeetingsPage() {
       {showModal && (
         <Modal title={editing ? 'Edit Meeting' : 'Schedule Meeting'} onClose={() => setShowModal(false)}>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <FormField label="Title / Purpose"><Input value={form.title} onChange={set('title')} required placeholder="e.g. Property Viewing" /></FormField>
             <FormField label="Property">
               <Select value={form.property} onChange={set('property')} required>
                 <option value="">Select property...</option>
                 {properties.map(p => <option key={p.id} value={p.id}>{p.title} — {p.location}</option>)}
+              </Select>
+            </FormField>
+            <FormField label="Tenant (optional)">
+              <Select value={form.tenant} onChange={set('tenant')}>
+                <option value="">Select tenant...</option>
+                {tenants.map(t => <option key={t.id} value={t.id}>{t.full_name} — {t.phone || t.email_address}</option>)}
               </Select>
             </FormField>
             <FormField label="Date & Time"><Input type="datetime-local" value={form.date_time} onChange={set('date_time')} required /></FormField>

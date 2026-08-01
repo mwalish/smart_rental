@@ -3,7 +3,7 @@ import api from '../../services/api'
 import { PageHeader, PrimaryBtn, SearchBar, FilterTabs, Badge, EmptyState, LoadingSpinner, Modal, FormField, Input, Select, ModalActions, Table, Tr, Td, ActionBtn } from '../../components/ui'
 
 const FILTERS = [{ key: 'ALL', label: 'All' }, { key: 'PENDING', label: 'Pending' }, { key: 'COMPLETED', label: 'Completed' }, { key: 'FAILED', label: 'Failed' }]
-const EMPTY = { lease: '', amount: '', payment_date: '', method: 'M-Pesa', status: 'PENDING' }
+const EMPTY = { lease: '', amount: '', method: 'M-Pesa', status: 'PENDING' }
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState([])
@@ -29,7 +29,6 @@ export default function PaymentsPage() {
     setForm(pay ? {
       lease: pay.lease?.id || pay.lease || '',
       amount: pay.amount || '',
-      payment_date: pay.payment_date ? new Date(pay.payment_date).toISOString().split('T')[0] : '',
       method: pay.method || 'M-Pesa',
       status: pay.status || 'PENDING'
     } : EMPTY)
@@ -39,8 +38,7 @@ export default function PaymentsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      const payload = { ...form, payment_date: new Date(form.payment_date).toISOString() }
-      editing ? await api.put(`landlord/payments/${editing.id}/`, payload) : await api.post('landlord/payments/', payload)
+      editing ? await api.put(`landlord/payments/${editing.id}/`, form) : await api.post('landlord/payments/', form)
       setShowModal(false); load()
     } catch (err) { alert(err.response?.data?.error || 'Failed to save') }
   }
@@ -87,7 +85,7 @@ export default function PaymentsPage() {
                 <p className="text-xs text-gray-400">{pay.property_title || '—'}</p>
               </Td>
               <Td className="font-bold text-gray-900">KSh {Number(pay.amount).toLocaleString()}</Td>
-              <Td className="text-gray-400 whitespace-nowrap">{pay.payment_date ? new Date(pay.payment_date).toLocaleDateString() : '—'}</Td>
+              <Td className="text-gray-400 whitespace-nowrap">{pay.created_at ? new Date(pay.created_at).toLocaleDateString() : '—'}</Td>
               <Td>
                 <span className="flex items-center gap-1.5 text-gray-600">
                   {pay.method === 'M-Pesa' && <i className="bi bi-phone text-green-600"></i>}
@@ -117,20 +115,17 @@ export default function PaymentsPage() {
             </FormField>
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Amount (KSh)"><Input type="number" value={form.amount} onChange={set('amount')} required placeholder="0" /></FormField>
-              <FormField label="Payment Date"><Input type="date" value={form.payment_date} onChange={set('payment_date')} required /></FormField>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
               <FormField label="Method">
                 <Select value={form.method} onChange={set('method')}>
                   <option>M-Pesa</option><option>Bank Transfer</option><option>Cash</option><option>Cheque</option>
                 </Select>
               </FormField>
-              <FormField label="Status">
-                <Select value={form.status} onChange={set('status')}>
-                  <option value="PENDING">Pending</option><option value="COMPLETED">Completed</option><option value="FAILED">Failed</option>
-                </Select>
-              </FormField>
             </div>
+            <FormField label="Status">
+              <Select value={form.status} onChange={set('status')}>
+                <option value="PENDING">Pending</option><option value="COMPLETED">Completed</option><option value="FAILED">Failed</option>
+              </Select>
+            </FormField>
             <ModalActions onCancel={() => setShowModal(false)} submitLabel={editing ? 'Update' : 'Save Payment'} />
           </form>
         </Modal>

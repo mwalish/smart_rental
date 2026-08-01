@@ -5,7 +5,7 @@ import api from '../services/api'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const { setToken, setUser } = useContext(AuthContext)
+  const { setToken, setUser, setProfile } = useContext(AuthContext)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -26,13 +26,15 @@ export default function LoginPage() {
       const { access, refresh, user, profile } = res.data
       setToken(access)
       setUser(user)
+      if (profile) setProfile(profile)
       localStorage.setItem('access_token', access)
       localStorage.setItem('refresh_token', refresh)
       localStorage.setItem('user', JSON.stringify(user))
       if (profile) localStorage.setItem('profile', JSON.stringify(profile))
-      navigate('/dashboard')
+      // house-hunting tenants go to /houses/dashboard, staff go to /dashboard
+      navigate(user.role === 'tenant' ? '/houses/dashboard' : '/dashboard')
     } catch (err) {
-      setError(err.response?.data?.detail || err.response?.data?.non_field_errors?.[0] || 'Login failed. Check your email and password.')
+      setError(err.response?.data?.error || err.response?.data?.detail || err.response?.data?.non_field_errors?.[0] || 'Login failed. Check your email and password.')
     } finally {
       setLoading(false)
     }
@@ -163,8 +165,14 @@ export default function LoginPage() {
             </form>
 
             <p className="text-center text-sm text-gray-500 mt-6">
-              Don't have an account?{' '}
-              <Link to="/register" className="font-semibold text-teal-600 hover:text-teal-700">Create one free</Link>
+              New here?{' '}
+              <Link to="/houses/register" className="font-semibold text-teal-600 hover:text-teal-700">
+                Create a free tenant account
+              </Link>
+            </p>
+
+            <p className="text-center text-sm text-gray-500 mt-3">
+              Account access is provided by your landlord or system admin.
             </p>
           </div>
 

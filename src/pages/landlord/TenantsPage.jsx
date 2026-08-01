@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import api from '../../services/api'
-import { PageHeader, SearchBar, Badge, EmptyState, LoadingSpinner, Table, Tr, Td, ActionBtn } from '../../components/ui'
+import { PageHeader, SearchBar, Badge, EmptyState, LoadingSpinner, Modal, Table, Tr, Td, ActionBtn } from '../../components/ui'
 
 export default function TenantsPage() {
   const [tenants, setTenants] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [viewing, setViewing] = useState(null)
 
   useEffect(() => {
     api.get('landlord/tenants/')
@@ -50,10 +51,10 @@ export default function TenantsPage() {
               <Td><Badge status={t.status || 'ACTIVE'} /></Td>
               <Td>
                 <div className="flex gap-1.5">
-                  <ActionBtn variant="blue">
+                  <ActionBtn variant="blue" onClick={() => setViewing(t)}>
                     <i className="bi bi-eye mr-1"></i>View
                   </ActionBtn>
-                  <ActionBtn variant="amber">
+                  <ActionBtn variant="amber" onClick={() => window.location.href = `mailto:${t.email || t.email_address || ''}?subject=SmartRent%20-%20Property%20Update`}>
                     <i className="bi bi-envelope mr-1"></i>Contact
                   </ActionBtn>
                 </div>
@@ -61,6 +62,62 @@ export default function TenantsPage() {
             </Tr>
           ))}
         </Table>
+      )}
+
+      {/* Tenant Detail Modal */}
+      {viewing && (
+        <Modal title="Tenant Details" onClose={() => setViewing(null)}>
+          <div className="text-center mb-5">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center text-white text-xl font-bold mx-auto mb-3 shadow-md">
+              {(viewing.full_name || '?')[0].toUpperCase()}
+            </div>
+            <h3 className="text-lg font-black text-gray-900">{viewing.full_name || '—'}</h3>
+            {viewing.property_title && <p className="text-sm text-gray-400 mt-0.5">{viewing.property_title}</p>}
+          </div>
+          <div className="space-y-2.5 text-sm">
+            <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+              <i className="bi bi-envelope text-teal-500"></i>
+              <span className="text-gray-500 w-16 shrink-0 text-xs font-semibold uppercase">Email</span>
+              <a href={`mailto:${viewing.email || viewing.email_address}`} className="text-gray-800 font-medium break-all hover:text-teal-600">
+                {viewing.email || viewing.email_address || '—'}
+              </a>
+            </div>
+            <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+              <i className="bi bi-telephone text-teal-500"></i>
+              <span className="text-gray-500 w-16 shrink-0 text-xs font-semibold uppercase">Phone</span>
+              <a href={`tel:${viewing.phone_number || viewing.phone}`} className="text-gray-800 font-medium hover:text-teal-600">
+                {viewing.phone_number || viewing.phone || '—'}
+              </a>
+            </div>
+            {(viewing.alternative_phone) && (
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                <i className="bi bi-telephone-outbound text-teal-500"></i>
+                <span className="text-gray-500 w-16 shrink-0 text-xs font-semibold uppercase">Alt Phone</span>
+                <a href={`tel:${viewing.alternative_phone}`} className="text-gray-800 font-medium hover:text-teal-600">{viewing.alternative_phone}</a>
+              </div>
+            )}
+            {viewing.id_number && (
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                <i className="bi bi-credit-card-2-front text-teal-500"></i>
+                <span className="text-gray-500 w-16 shrink-0 text-xs font-semibold uppercase">ID No.</span>
+                <span className="text-gray-800 font-medium">{viewing.id_number}</span>
+              </div>
+            )}
+            {viewing.join_date && (
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                <i className="bi bi-calendar-check text-teal-500"></i>
+                <span className="text-gray-500 w-16 shrink-0 text-xs font-semibold uppercase">Joined</span>
+                <span className="text-gray-800 font-medium">{viewing.join_date}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 mt-5">
+            <button onClick={() => setViewing(null)} className="flex-1 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Close</button>
+            <a href={`tel:${viewing.phone_number || viewing.phone}`} className="flex-1 py-2.5 text-sm btn-primary text-center">
+              <i className="bi bi-telephone-fill mr-1"></i> Call Tenant
+            </a>
+          </div>
+        </Modal>
       )}
     </div>
   )

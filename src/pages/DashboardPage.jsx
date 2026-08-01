@@ -2,6 +2,8 @@ import React, { useContext, useState, useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { AuthContext } from '../AuthContext'
 import api from '../services/api'
+import AdminOverviewPage from './admin/AdminOverviewPage'
+import { Badge } from '../components/ui'
 
 const LANDLORD_NAV = [
   { to: '/dashboard', label: 'Overview', icon: 'bi-grid-1x2-fill', exact: true },
@@ -14,6 +16,16 @@ const LANDLORD_NAV = [
   { to: '/dashboard/meetings', label: 'Meetings', icon: 'bi-calendar2-check-fill' },
   { to: '/dashboard/notices', label: 'Notices', icon: 'bi-megaphone-fill' },
   { to: '/dashboard/register-tenant', label: 'Register Tenant', icon: 'bi-person-plus-fill' },
+]
+
+const ADMIN_NAV = [
+  { to: '/dashboard', label: 'Overview', icon: 'bi-grid-1x2-fill', exact: true },
+  { to: '/dashboard/admin/users', label: 'All Users', icon: 'bi-people-fill' },
+  { to: '/dashboard/admin/create-landlord', label: 'Create Landlord', icon: 'bi-person-plus-fill' },
+  { to: '/dashboard/admin/leases', label: 'All Leases', icon: 'bi-file-earmark-text-fill' },
+  { to: '/dashboard/admin/payments', label: 'All Payments', icon: 'bi-cash-stack' },
+  { to: '/dashboard/admin/maintenance', label: 'Maintenance', icon: 'bi-tools' },
+  { to: '/dashboard/admin/notices', label: 'Notices', icon: 'bi-megaphone-fill' },
 ]
 
 const TENANT_NAV = [
@@ -39,13 +51,23 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [recentRequests, setRecentRequests] = useState([])
+  const [recentPayments, setRecentPayments] = useState([])
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         if (user?.role === 'landlord') {
-          const res = await api.get('landlord/dashboard/')
-          setSummary(res.data.data.summary)
+          const [dashRes, reqRes, payRes] = await Promise.all([
+            api.get('landlord/dashboard/'),
+            api.get('landlord/rental-requests/'),
+            api.get('landlord/payments/')
+          ])
+          setSummary(dashRes.data.data.summary)
+          setRecentRequests((reqRes.data.rental_requests || reqRes.data || []).slice(0, 5))
+          setRecentPayments((payRes.data.payments || payRes.data || []).slice(0, 5))
+        } else if (user?.role === 'admin') {
+          setLoading(false)
         }
       } catch (err) {
         console.error('Failed to load dashboard:', err)
@@ -56,7 +78,7 @@ export default function DashboardPage() {
     fetchStats()
   }, [user])
 
-  const navLinks = user?.role === 'landlord' ? LANDLORD_NAV : TENANT_NAV
+  const navLinks = user?.role === 'admin' ? ADMIN_NAV : user?.role === 'landlord' ? LANDLORD_NAV : TENANT_NAV
   const displayName = profile?.full_name || user?.name || user?.username || 'User'
   const isOverview = location.pathname === '/dashboard'
 
@@ -198,6 +220,8 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
+              ) : user?.role === 'admin' ? (
+                <AdminOverviewPage />
               ) : user?.role === 'tenant' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {[
@@ -217,6 +241,92 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : null}
+
+              {/* ── Landlord: Occupancy + Portfolio ── */}
+              {user?.role === 'landlord' && summary && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Occupancy bar */}
+                  <div className="bg-white rounded-2xl border border-gray-100 p-6 stat-card">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                        <i className="bi bi-pie-chart-fill text-teal-500"></i> Portfolio Occupancy
+                      </p>
+                      <span className="text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1 rounded-full">
+                        {summary.total_properties ? Math.round(summary.occupied_properties / summary.total_properties * 100) : 0}%
+                      </span>
+                    </div>
+                    <div className="h-3 bg-gray-100 rounded-full overflow-hidden mb-4">
+                      <div
+                        className="h-full bg-gradient-to-r from-teal-500 to-cyan-400 rounded-full transition-all duration-1000"
+                        style={{ width: `${summary.total_properties ? Math.round(summary.occupied_properties / summary.total_properties * 100) : 0}%` }}
+                      ></div>
+                    </div>
+                    <div className="grid grid-cols-3 text-center">
+                      <div>
+                        <p className="text-xl font-black text-gray-900">{summary.total_properties}</p>
+                        <p className="text-xs text-gray-400">Total Units</p>
+                      </div>
+                      <div>
+                        <p className="text-xl font-black text-teal-600">{summary.occupied_properties}</p>
+                        <p className="text-xs text-gray-400">Occupied</p>
+                      </div>
+                      <div>
+                        <p className="text-xl font-black text-amber-500">{summary.available_properties}</p>
+                        <p className="text-xs text-gray-400">Available</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent requests */}
+                  <div className="bg-white rounded-2xl border border-gray-100 p-6 stat-card">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                        <i className="bi bi-envelope-fill text-violet-500"></i> Recent Rental Requests
+                      </p>
+                      <Link to="/dashboard/requests" className="text-xs font-semibold text-teal-600 hover:text-teal-700">View all →</Link>
+                    </div>
+                    {recentRequests.length === 0 ? (
+                      <p className="text-sm text-gray-400 py-6 text-center">No requests yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {recentRequests.map(r => (
+                          <div key={r.id} className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 text-xs font-bold shrink-0">
+                              {(r.tenant_name || r.lead_name || '?')[0].toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-gray-900 truncate">{r.tenant_name || r.lead_name || '—'}</p>
+                              <p className="text-xs text-gray-400 truncate">{r.property_title || ''}</p>
+                            </div>
+                            <Badge status={r.status} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Landlord: Recent Payments ── */}
+              {user?.role === 'landlord' && recentPayments.length > 0 && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-6 stat-card">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                      <i className="bi bi-cash-stack text-green-500"></i> Recent Payments
+                    </p>
+                    <Link to="/dashboard/payments" className="text-xs font-semibold text-teal-600 hover:text-teal-700">View all →</Link>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    {recentPayments.map(p => (
+                      <div key={p.id} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                        <p className="text-sm font-bold text-gray-900">KSh {Number(p.amount).toLocaleString()}</p>
+                        <p className="text-xs text-gray-400 truncate">{p.tenant_name || '—'}</p>
+                        <div className="mt-1.5"><Badge status={p.status} /></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Quick links */}
               <div className="bg-white rounded-2xl border border-gray-100 p-5">
