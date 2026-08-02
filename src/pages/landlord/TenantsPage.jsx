@@ -110,6 +110,34 @@ export default function TenantsPage() {
                 <span className="text-gray-800 font-medium">{viewing.join_date}</span>
               </div>
             )}
+            {viewing.created_at && (
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                <i className="bi bi-clock-history text-teal-500"></i>
+                <span className="text-gray-500 w-16 shrink-0 text-xs font-semibold uppercase">Added</span>
+                <span className="text-gray-800 font-medium">{new Date(viewing.created_at).toLocaleDateString()}</span>
+              </div>
+            )}
+            {viewing.user_email && (
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                <i className="bi bi-person-badge text-teal-500"></i>
+                <span className="text-gray-500 w-16 shrink-0 text-xs font-semibold uppercase">Account</span>
+                <span className="text-gray-800 font-medium">{viewing.user_email}</span>
+              </div>
+            )}
+            {viewing.registered_by_name && (
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                <i className="bi bi-person-plus-fill text-teal-500"></i>
+                <span className="text-gray-500 w-16 shrink-0 text-xs font-semibold uppercase">Registered By</span>
+                <span className="text-gray-800 font-medium">{viewing.registered_by_name}</span>
+              </div>
+            )}
+            {viewing.status && (
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                <i className="bi bi-shield-check text-teal-500"></i>
+                <span className="text-gray-500 w-16 shrink-0 text-xs font-semibold uppercase">Status</span>
+                <span className="text-gray-800 font-medium">{viewing.status}</span>
+              </div>
+            )}
           </div>
           <div className="flex gap-2 mt-5">
             <button onClick={() => setViewing(null)} className="flex-1 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Close</button>

@@ -76,5 +76,21 @@ details and can view who applied for each house.
 - [x] 11. Frontend build verified — `npm run build` passes (no errors).
 - [x] 12. Backend restarted; API verified returning `bedrooms`/`bathrooms`/`square_feet` + landlord contact.
 - [x] 13. Convert-to-tenant route resolves (401 without token); `/api/properties/available/` → 200.
-- [ ] 14. Final manual test: `/houses`, `/houses/:id`, `/houses/register`, login, landlord Properties/Requests pages.
+- [x] 14. Final manual test: `/houses`, `/houses/:id`, `/houses/register`, login, landlord Properties/Requests pages.
+
+## Tenant account for "dastun" (lead → tenant conversion)
+- [x] Investigated "Failed to convert to tenant" — root cause: the lead's email `lexluther723@gmail.com` matched **User id 8 ("bella", tenant)** and phone `0113902054` matched **User id 1 (admin)**, so earlier reuse attempts created an ambiguous link. A dedicated account was created and linked successfully.
+- [x] **Tenant created & verified**: `dastun mwalimo mwakazi`
+  - Login: `tanant@gmail.com` / `Dastun@2024` (role `tenant`, active)
+  - Profile id 7, linked to RentalRequest #9 ("apartment", APPROVED), registered by landlord "ayub"
+  - Verified end-to-end login via `POST /api/core/login/` → 200 + JWT
+  - Verified tenant-scoped endpoints: rental-requests (#9 returned), leases, payments, maintenance, notices, profile — all work with the tenant token.
+
+## Full tenant dashboard (role-based visibility)
+- [x] `src/ProtectedRoute.jsx` — tenants are no longer redirected to `/houses/dashboard`; they access the full `/dashboard` portal.
+- [x] `src/pages/LoginPage.jsx` — tenant login now navigates to `/dashboard` (full portal) instead of the minimal house-hunting dashboard.
+- [x] `src/App.jsx` — `/dashboard` route now allows `landlord`, `admin`, **and `tenant`**. Added `RoleSwitch` component that renders the tenant or landlord payments/maintenance page based on the logged-in role (shared `/dashboard/payments` + `/dashboard/maintenance` routes).
+- [x] `src/pages/DashboardPage.jsx` — tenant overview now fetches real data (`core/rental-requests`, `core/payments`, `core/maintenance`, `core/leases`) and renders four comprehensive stat cards: Applications, Current Lease, Total Paid, Open Maintenance. Tenant sidebar shows Overview / My Property / My Payments / Maintenance / Rental Requests / Notices.
+- [x] Frontend build passes (`npm run build` → ✓ 115 modules).
+- [x] Backend restarted; `/api/core/login/` verified with the dastun tenant account.
 

@@ -2,12 +2,16 @@
 import { useEffect } from 'react'
 
 export const PageHeader = ({ title, subtitle, action }) => (
-  <div className="flex items-center justify-between mb-6">
-    <div>
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+    <div className="min-w-0">
       <h2 className="text-xl font-black text-gray-900">{title}</h2>
       {subtitle && <p className="text-sm text-gray-400 mt-0.5">{subtitle}</p>}
     </div>
-    {action}
+    {action && (
+      <div className="w-full sm:w-auto flex justify-center sm:justify-end shrink-0">
+        {action}
+      </div>
+    )}
   </div>
 )
 
@@ -16,7 +20,7 @@ export const PrimaryBtn = ({ onClick, children, disabled, type = 'button', class
     type={type}
     onClick={onClick}
     disabled={disabled}
-    className={`btn-primary px-5 py-2.5 text-sm flex items-center gap-2 ${className}`}
+    className={`btn-primary px-5 py-2.5 text-sm flex items-center justify-center gap-2 whitespace-nowrap ${className}`}
   >
     {children}
   </button>
@@ -25,7 +29,7 @@ export const PrimaryBtn = ({ onClick, children, disabled, type = 'button', class
 export const SecondaryBtn = ({ onClick, children, className = '' }) => (
   <button
     onClick={onClick}
-    className={`px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors ${className}`}
+    className={`px-4 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors whitespace-nowrap ${className}`}
   >
     {children}
   </button>
@@ -45,12 +49,12 @@ export const SearchBar = ({ value, onChange, placeholder = 'Search...' }) => (
 )
 
 export const FilterTabs = ({ options, active, onChange }) => (
-  <div className="flex flex-wrap gap-1.5">
+  <div className="flex flex-wrap gap-1.5 overflow-x-auto pb-1">
     {options.map(o => (
       <button
         key={o.key}
         onClick={() => onChange(o.key)}
-        className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+        className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
           active === o.key
             ? 'bg-slate-900 text-white shadow-sm'
             : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-300 hover:text-gray-700'
@@ -213,11 +217,11 @@ export const ActionBtn = ({ onClick, variant = 'default', children, disabled = f
 }
 
 export const ModalActions = ({ onCancel, submitLabel, submitting }) => (
-  <div className="flex gap-3 pt-2">
-    <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+  <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+    <button type="button" onClick={onCancel} className="w-full sm:flex-1 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
       Cancel
     </button>
-    <button type="submit" disabled={submitting} className="flex-1 py-2.5 text-sm btn-primary disabled:opacity-50">
+    <button type="submit" disabled={submitting} className="w-full sm:flex-1 py-2.5 text-sm btn-primary disabled:opacity-50">
       {submitting ? (
         <span className="flex items-center justify-center gap-2">
           <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">

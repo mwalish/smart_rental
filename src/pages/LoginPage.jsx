@@ -31,8 +31,8 @@ export default function LoginPage() {
       localStorage.setItem('refresh_token', refresh)
       localStorage.setItem('user', JSON.stringify(user))
       if (profile) localStorage.setItem('profile', JSON.stringify(profile))
-      // house-hunting tenants go to /houses/dashboard, staff go to /dashboard
-      navigate(user.role === 'tenant' ? '/houses/dashboard' : '/dashboard')
+      // tenants now land on the full dashboard portal (same as landlord/admin)
+      navigate('/dashboard')
     } catch (err) {
       setError(err.response?.data?.error || err.response?.data?.detail || err.response?.data?.non_field_errors?.[0] || 'Login failed. Check your email and password.')
     } finally {

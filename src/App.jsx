@@ -1,4 +1,6 @@
+import { useContext } from "react";
 import { useRoutes } from "react-router-dom";
+import { AuthContext } from "./AuthContext";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
@@ -32,6 +34,7 @@ import AdminLeasesPage from './pages/admin/AdminLeasesPage'
 import AdminPaymentsPage from './pages/admin/AdminPaymentsPage'
 import AdminMaintenancePage from './pages/admin/AdminMaintenancePage'
 import AdminNoticesPage from './pages/admin/AdminNoticesPage'
+import AdminRentalRequestsPage from './pages/admin/AdminRentalRequestsPage'
 
 // House-Hunting Pages
 import ListingsPage from "./pages/househunting/ListingsPage";
@@ -39,6 +42,16 @@ import PropertyDetailPage from "./pages/househunting/PropertyDetailPage";
 import TenantDashboardPage from "./pages/househunting/TenantDashboardPage";
 import MyRequestsPage from "./pages/househunting/MyRequestsPage";
 import RegisterPage from "./pages/househunting/RegisterPage";
+
+// Role-aware wrapper for shared routes (payments/maintenance)
+// Renders the tenant or landlord page depending on the logged-in user's role.
+function RoleSwitch({ role }) {
+  const { user } = useContext(AuthContext)
+  const isTenant = user?.role === 'tenant'
+  if (role === 'payments') return isTenant ? <TenantPaymentsPage /> : <PaymentsPage />
+  if (role === 'maintenance') return isTenant ? <TenantMaintenancePage /> : <LandlordMaintenancePage />
+  return null
+}
 
 export default function App() {
   const routes = useRoutes([
@@ -69,11 +82,11 @@ export default function App() {
     // LANDLORD / ADMIN PORTAL (Private)
     // =====================
 
-    // Shared Dashboard
+    // Shared Dashboard — all roles (landlord / admin / tenant)
     {
       path: '/dashboard',
       element: (
-        <ProtectedRoute allowedRoles={['landlord', 'admin']}>
+        <ProtectedRoute allowedRoles={['landlord', 'admin', 'tenant']}>
           <DashboardPage />
         </ProtectedRoute>
       )
@@ -87,14 +100,6 @@ export default function App() {
     {
       path: '/dashboard/tenants',
       element: <ProtectedRoute allowedRoles={['landlord']}><TenantsPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/maintenance',
-      element: <ProtectedRoute allowedRoles={['landlord']}><LandlordMaintenancePage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/payments',
-      element: <ProtectedRoute allowedRoles={['landlord']}><PaymentsPage /></ProtectedRoute>
     },
     {
       path: '/dashboard/leases',
@@ -116,6 +121,14 @@ export default function App() {
       path: '/dashboard/register-tenant',
       element: <ProtectedRoute allowedRoles={['landlord']}><RegisterTenantPage /></ProtectedRoute>
     },
+    {
+      path: '/dashboard/payments',
+      element: <ProtectedRoute allowedRoles={['landlord', 'tenant']}><RoleSwitch role="payments" /></ProtectedRoute>
+    },
+    {
+      path: '/dashboard/maintenance',
+      element: <ProtectedRoute allowedRoles={['landlord', 'tenant']}><RoleSwitch role="maintenance" /></ProtectedRoute>
+    },
 
     // Tenant Only Routes (Main Portal)
     {
@@ -125,10 +138,6 @@ export default function App() {
     {
       path: '/dashboard/tenant-payments',
       element: <ProtectedRoute allowedRoles={['tenant']}><TenantPaymentsPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/maintenance',
-      element: <ProtectedRoute allowedRoles={['tenant']}><TenantMaintenancePage /></ProtectedRoute>
     },
     {
       path: '/dashboard/my-requests',
@@ -163,6 +172,10 @@ export default function App() {
     {
       path: '/dashboard/admin/notices',
       element: <ProtectedRoute allowedRoles={['admin']}><AdminNoticesPage /></ProtectedRoute>
+    },
+    {
+      path: '/dashboard/admin/rental-requests',
+      element: <ProtectedRoute allowedRoles={['admin']}><AdminRentalRequestsPage /></ProtectedRoute>
     },
 
     { path: '*', element: <NotFound /> },

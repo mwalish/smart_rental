@@ -54,10 +54,20 @@ export const registerTenant = async (data) => {
   return res.data
 }
 
-/** Landlord-only: convert a house-hunting lead request into a registered tenant account.
- *  Reuses the same account if the lead already signed up (no duplicates). */
-export const convertLeadToTenant = async (requestId) => {
-  const res = await api.post(`landlord/rental-requests/${requestId}/convert-to-tenant/`)
+/**
+ * Convert a house-hunting lead request into a registered tenant account.
+ * REUSES the same account if the lead already signed up (no duplicates) —
+ * grants tenant privileges on the existing account.
+ *
+ * @param {number} requestId - Rental request id
+ * @param {'landlord'|'admin'} [asRole] - Who is performing the conversion.
+ *   Landlord uses the landlord endpoint; admin uses the core endpoint.
+ */
+export const convertLeadToTenant = async (requestId, asRole = 'landlord') => {
+  const base = asRole === 'admin'
+    ? `core/rental-requests/${requestId}/convert-to-tenant/`
+    : `landlord/rental-requests/${requestId}/convert-to-tenant/`
+  const res = await api.post(base)
   return res.data
 }
 

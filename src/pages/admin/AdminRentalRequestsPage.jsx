@@ -10,7 +10,7 @@ const FILTERS = [
   { key: 'REJECTED', label: 'Rejected' },
 ]
 
-export default function RequestsPage() {
+export default function AdminRentalRequestsPage() {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('ALL')
@@ -20,7 +20,7 @@ export default function RequestsPage() {
   const [convertedInfo, setConvertedInfo] = useState(null)
 
   useEffect(() => {
-    api.get('landlord/rental-requests/')
+    api.get('core/rental-requests/')
       .then(r => setRequests(r.data.rental_requests || r.data || []))
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -28,13 +28,12 @@ export default function RequestsPage() {
 
   const updateStatus = async (id, status) => {
     try {
-      // Backend landlord endpoint accepts PATCH (not PUT)
-      const res = await api.patch(`landlord/rental-requests/${id}/`, { status })
-      setRequests(prev => prev.map(r => r.id === id ? { ...r, status, ...(res.data?.data || {}) } : r))
+      const res = await api.put(`core/rental-requests/${id}/`, { status })
+      setRequests(prev => prev.map(r => r.id === id ? { ...r, status, ...(res.data?.rental_request || {}) } : r))
       // If approval auto-converted a lead into a tenant, show the result
-      if (res.data?.data?.converted_tenant) {
-        setConvertedInfo(res.data.data.converted_tenant)
-        setNotice(res.data.data.converted_tenant.message)
+      if (res.data?.rental_request?.converted_tenant) {
+        setConvertedInfo(res.data.rental_request.converted_tenant)
+        setNotice(res.data.rental_request.converted_tenant.message)
       } else if (status === 'APPROVED') {
         setNotice(`Request #${id} approved — applicant now has tenant privileges.`)
       }
@@ -44,16 +43,15 @@ export default function RequestsPage() {
   const handleConvert = async (r) => {
     if (!window.confirm(
       r.tenant
-        ? `Link this existing tenant "${r.tenant_name || r.lead_name}" to your portfolio? They keep their current login.`
-        : `Grant "${r.lead_name || r.tenant_name || 'this applicant'}" tenant privileges? If they already have an account it will be reused — no duplicate account is created.`
+        ? `This request is already linked to tenant "${r.tenant_name || r.lead_name}".`
+        : `Grant the existing account (or create one if none) for "${r.lead_name || r.tenant_name || 'this applicant'}" tenant privileges?`
     )) return
     setConverting(true)
     try {
-      const res = await convertLeadToTenant(r.id)
+      const res = await convertLeadToTenant(r.id, 'admin')
       setConvertedInfo(res)
       setNotice(res.message)
-      // Refresh list so the request now shows the linked tenant
-      const fresh = await api.get('landlord/rental-requests/')
+      const fresh = await api.get('core/rental-requests/')
       setRequests(fresh.data.rental_requests || fresh.data || [])
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to convert to tenant')
@@ -132,7 +130,7 @@ export default function RequestsPage() {
                     </span>
                   ) : (
                     <ActionBtn variant="amber" onClick={() => handleConvert(r)} disabled={converting}>
-                      <i className="bi bi-person-check-fill mr-1"></i>Grant Tenant Privileges
+                      <i className="bi bi-person-plus-fill mr-1"></i>Grant Tenant Privileges
                     </ActionBtn>
                   )}
                   {r.status === 'PENDING' && (
@@ -198,3 +196,4 @@ export default function RequestsPage() {
     </div>
   )
 }
+
