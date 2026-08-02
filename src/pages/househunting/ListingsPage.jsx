@@ -69,13 +69,33 @@ export default function ListingsPage() {
     return matchSearch && matchLocation && matchType && minOk && maxOk
   })
 
+// Helper: resolve all photos for a property (backend + local storage)
+  const getAllPhotos = (p) => {
+    const photos = []
+    if (p?.photos && Array.isArray(p.photos)) photos.push(...p.photos)
+    if (p?.photo) photos.push(p.photo)
+    if (p?.image) photos.push(p.image)
+    try {
+      const raw = localStorage.getItem(`prop_photos_${p?.id}`)
+      if (raw) {
+        const local = JSON.parse(raw)
+        if (Array.isArray(local)) photos.push(...local)
+      }
+    } catch {}
+    const seen = new Set()
+    return photos.filter(ph => {
+      const key = ph?.substring(0, 50)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
+
   // Helper: resolve photo for a property (backend photo/photos field OR locally uploaded base64)
   const getPhoto = (p) => {
-    if (p?.photo) return p.photo
-    if (p?.photos && Array.isArray(p.photos) && p.photos.length) return p.photos[0]
-    if (p?.image) return p.image
-    const local = localStorage.getItem(`prop_img_${p?.id}`)
-    return local || null
+    const all = getAllPhotos(p)
+    if (all.length > 0) return all[0]
+    return null
   }
 
   return (
@@ -234,7 +254,7 @@ export default function ListingsPage() {
                 to={`/houses/${p.id}`}
                 className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all duration-300 group"
               >
-                {/* Property image (uploaded photo or placeholder) */}
+{/* Property image (uploaded photo or placeholder) */}
                 <div className="h-44 bg-gradient-to-br from-teal-500/20 to-cyan-400/20 relative overflow-hidden">
                   {getPhoto(p) ? (
                     <img
@@ -250,6 +270,15 @@ export default function ListingsPage() {
                   <div className="absolute top-3 right-3">
                     <Badge status={p.status || 'AVAILABLE'} />
                   </div>
+                  {/* Photo count badge */}
+                  {(() => {
+                    const count = getAllPhotos(p).length
+                    return count > 1 ? (
+                      <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <i className="bi bi-images"></i> {count}
+                      </div>
+                    ) : null
+                  })()}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent h-20"></div>
                   <div className="absolute bottom-3 left-3 text-white">
                     <p className="text-lg font-bold">KSh {Number(p.rent_per_month).toLocaleString()}</p>

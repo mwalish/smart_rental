@@ -10,9 +10,10 @@ export default function PropertyDetailPage() {
   const navigate = useNavigate()
   const { user, setToken, setUser, setProfile } = useContext(AuthContext)
 
-  const [property, setProperty] = useState(null)
+const [property, setProperty] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0)
 
   // Guest combined registration + inquiry fields
   const [fullName, setFullName] = useState('')
@@ -41,12 +42,38 @@ export default function PropertyDetailPage() {
   const isAuthenticated = !!user
   const isTenant = user?.role === 'tenant'
 
-  // Resolve photo (backend field OR locally uploaded base64)
-  const getPhoto = (p) => {
-    if (p?.photo) return p.photo
-    if (p?.photos && Array.isArray(p.photos) && p.photos.length) return p.photos[0]
-    if (p?.image) return p.image
-    return localStorage.getItem(`prop_img_${p?.id}`) || null
+// Get all photos for a property (backend + local storage)
+  const getAllPhotos = (p) => {
+    const photos = []
+    if (p?.photos && Array.isArray(p.photos)) photos.push(...p.photos)
+    if (p?.photo) photos.push(p.photo)
+    if (p?.image) photos.push(p.image)
+    // Check localStorage
+    try {
+      const raw = localStorage.getItem(`prop_photos_${p?.id}`)
+      if (raw) {
+        const local = JSON.parse(raw)
+        if (Array.isArray(local)) photos.push(...local)
+      }
+    } catch {}
+    // Deduplicate by first 50 chars
+    const seen = new Set()
+    return photos.filter(ph => {
+      const key = ph?.substring(0, 50)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
+
+  const photos = getAllPhotos(property)
+  const currentPhoto = photos.length > 0 ? photos[currentPhotoIndex] : null
+
+  const goToPrev = () => {
+    setCurrentPhotoIndex(prev => (prev === 0 ? photos.length - 1 : prev - 1))
+  }
+  const goToNext = () => {
+    setCurrentPhotoIndex(prev => (prev === photos.length - 1 ? 0 : prev + 1))
   }
 
   // Resolve landlord contact — uses real backend data (landlord_name/phone/email)
@@ -202,16 +229,52 @@ export default function PropertyDetailPage() {
         )}
 
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-          {/* Image Header */}
-          <div className="h-56 md:h-72 bg-gradient-to-br from-teal-500/30 to-cyan-400/30 relative overflow-hidden">
-            {getPhoto(property) ? (
-              <img src={getPhoto(property)} alt={property?.title || 'Property'} className="w-full h-full object-cover" />
+{/* Image Header — Carousel/Gallery */}
+          <div className="relative">
+            {currentPhoto ? (
+              <div className="h-56 md:h-72 bg-gray-100 relative overflow-hidden">
+                <img src={currentPhoto} alt={property?.title || 'Property'} className="w-full h-full object-cover" />
+                {/* Prev/Next arrows */}
+                {photos.length > 1 && (
+                  <>
+                    <button
+                      onClick={goToPrev}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all z-10"
+                    >
+                      <i className="bi bi-chevron-left text-gray-700 text-sm"></i>
+                    </button>
+                    <button
+                      onClick={goToNext}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all z-10"
+                    >
+                      <i className="bi bi-chevron-right text-gray-700 text-sm"></i>
+                    </button>
+                  </>
+                )}
+                {/* Photo count badge */}
+                {photos.length > 1 && (
+                  <div className="absolute bottom-3 right-3 bg-black/60 text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 z-10">
+                    <i className="bi bi-images"></i> {currentPhotoIndex + 1} / {photos.length}
+                  </div>
+                )}
+              </div>
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <i className="bi bi-building text-8xl text-teal-500/20"></i>
+              <div className="h-56 md:h-72 bg-gradient-to-br from-teal-500/30 to-cyan-400/30 relative overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <i className="bi bi-building text-8xl text-teal-500/20"></i>
+                </div>
               </div>
             )}
-            <div className="absolute top-5 left-5 flex gap-2">
+            {/* Overlay gradient */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent h-32 pointer-events-none"></div>
+            <div className="absolute bottom-5 left-5 text-white z-10">
+              <h1 className="text-3xl font-black">{property?.title || 'Untitled'}</h1>
+              <p className="text-white/80 flex items-center gap-1 mt-1">
+                <i className="bi bi-geo-alt"></i> {property?.location || 'Location not specified'}
+              </p>
+            </div>
+            {/* Badges */}
+            <div className="absolute top-5 left-5 flex gap-2 z-10">
               <Badge status={property?.status || 'AVAILABLE'} />
               {(property?.property_type || property?.house_type) && (
                 <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-700">
@@ -219,13 +282,20 @@ export default function PropertyDetailPage() {
                 </span>
               )}
             </div>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent h-32"></div>
-            <div className="absolute bottom-5 left-5 text-white">
-              <h1 className="text-3xl font-black">{property?.title || 'Untitled'}</h1>
-              <p className="text-white/80 flex items-center gap-1 mt-1">
-                <i className="bi bi-geo-alt"></i> {property?.location || 'Location not specified'}
-              </p>
-            </div>
+            {/* Dot indicators */}
+            {photos.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                {photos.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentPhotoIndex(idx)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      idx === currentPhotoIndex ? 'bg-white w-5' : 'bg-white/50 hover:bg-white/80'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Details */}

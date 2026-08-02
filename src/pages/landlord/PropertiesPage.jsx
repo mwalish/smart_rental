@@ -4,16 +4,56 @@ import { PageHeader, PrimaryBtn, EmptyState, LoadingSpinner, Modal, FormField, I
 
 const EMPTY = { title: '', location: '', rent_per_month: '', bedrooms: 1, bathrooms: 1, square_feet: '', status: 'AVAILABLE', description: '' }
 
+/** Get locally stored photos array for a property */
+const getStoredPhotos = (id) => {
+  try {
+    const raw = localStorage.getItem(`prop_photos_${id}`)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+/** Save photos array to localStorage */
+const saveStoredPhotos = (id, photos) => {
+  localStorage.setItem(`prop_photos_${id}`, JSON.stringify(photos))
+}
+
+/** Get the first photo (or null) for a property — checks both backend photos field and localStorage */
+const getFirstPhoto = (p) => {
+  // Backend photos JSONField (array of base64)
+  if (p?.photos && Array.isArray(p.photos) && p.photos.length > 0) return p.photos[0]
+  // Legacy single photo field
+  if (p?.photo) return p.photo
+  // Local storage
+  const local = getStoredPhotos(p?.id)
+  if (local.length > 0) return local[0]
+  return null
+}
+
+/** Get all photos for a property (backend + local combined) */
+const getAllPhotos = (p) => {
+  const photos = []
+  if (p?.photos && Array.isArray(p.photos)) photos.push(...p.photos)
+  if (p?.photo) photos.push(p.photo)
+  const local = getStoredPhotos(p?.id)
+  photos.push(...local)
+  return photos
+}
+
 export default function PropertiesPage() {
   const [properties, setProperties] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(EMPTY)
-  const [photo, setPhoto] = useState(null)
-  const [photoPreview, setPhotoPreview] = useState(null)
-  const [applicants, setApplicants] = useState({}) // property_id -> applicant list
+  const [photos, setPhotos] = useState([]) // array of base64 strings for new uploads
+  const [photoPreviews, setPhotoPreviews] = useState([]) // previews for display
+const [applicants, setApplicants] = useState({}) // property_id -> applicant list
   const [showApplicants, setShowApplicants] = useState(null) // property object
+  const [uploadingFor, setUploadingFor] = useState(null) // property id being uploaded to
+  const [uploadPhotos, setUploadPhotos] = useState([]) // photos being uploaded
+  const [uploadPreviews, setUploadPreviews] = useState([]) // previews for upload
+  const [uploading, setUploading] = useState(false)
+  const [uploadNotice, setUploadNotice] = useState('')
 
   const load = async () => {
     try {
@@ -36,36 +76,54 @@ export default function PropertiesPage() {
   const openForm = (p = null) => {
     setEditing(p)
     setForm(p ? { title: p.title || '', location: p.location || '', rent_per_month: p.rent_per_month || '', bedrooms: p.bedrooms || 1, bathrooms: p.bathrooms || 1, square_feet: p.square_feet || '', status: p.status || 'AVAILABLE', description: p.description || '' } : EMPTY)
-    // Preload locally-uploaded photo if any
-    const saved = p ? localStorage.getItem(`prop_img_${p.id}`) : null
-    setPhotoPreview(saved || p?.photo || null)
-    setPhoto(null)
+    // Preload locally-stored photos for this property
+    const existing = p ? getStoredPhotos(p.id) : []
+    setPhotos([])
+    setPhotoPreviews(existing)
     setShowModal(true)
   }
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      setPhoto(reader.result)
-      setPhotoPreview(reader.result)
-    }
-    reader.readAsDataURL(file)
+  const handlePhotosChange = (e) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    const newPreviews = []
+    files.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        newPreviews.push(reader.result)
+        if (newPreviews.length === files.length) {
+          setPhotoPreviews(prev => [...prev, ...newPreviews])
+          setPhotos(prev => [...prev, ...newPreviews])
+        }
+      }
+      reader.readAsDataURL(file)
+    })
   }
 
-  const handleSubmit = async (e) => {
+  const removePhoto = (index) => {
+    setPhotoPreviews(prev => prev.filter((_, i) => i !== index))
+    setPhotos(prev => prev.filter((_, i) => i !== index))
+  }
+
+const handleSubmit = async (e) => {
     e.preventDefault()
     try {
       let savedId = editing?.id
+      // Include uploaded photos in the payload so they get saved to the backend JSONField
+      const payload = { ...form }
+      if (photoPreviews.length > 0) {
+        payload.photos = photoPreviews
+      }
       if (editing) {
-        await api.put(`landlord/properties/${editing.id}/`, form)
+        await api.put(`landlord/properties/${editing.id}/`, payload)
       } else {
-        const r = await api.post('landlord/properties/', form)
+        const r = await api.post('landlord/properties/', payload)
         savedId = r.data?.data?.id || r.data?.id
       }
-      // Persist the uploaded photo locally (base64) so listings/detail pages can show it
-      if (photo && savedId) localStorage.setItem(`prop_img_${savedId}`, photo)
+      // Also persist photos locally for fast display
+      if (photoPreviews.length > 0 && savedId) {
+        saveStoredPhotos(savedId, photoPreviews)
+      }
       setShowModal(false); load()
     } catch (err) {
       const d = err.response?.data
@@ -77,13 +135,11 @@ export default function PropertiesPage() {
     if (!window.confirm('Delete this property?')) return
     try {
       await api.delete(`landlord/properties/${id}/`)
-      localStorage.removeItem(`prop_img_${id}`)
+      localStorage.removeItem(`prop_photos_${id}`)
       load()
     }
     catch { alert('Failed to delete') }
   }
-
-  const getPhoto = (p) => p?.photo || localStorage.getItem(`prop_img_${p?.id}`) || null
 
   const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
 
@@ -101,12 +157,20 @@ export default function PropertiesPage() {
         <EmptyState icon="bi-building" message='No properties yet. Click "Add Property" to get started.' />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {properties.map(p => (
+{properties.map(p => {
+            const allPhotos = getAllPhotos(p)
+            const firstPhoto = getFirstPhoto(p)
+            return (
             <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-              {getPhoto(p) ? (
+              {firstPhoto ? (
                 <div className="h-36 bg-gray-100 relative">
-                  <img src={getPhoto(p)} alt={p.title} className="w-full h-full object-cover" />
+                  <img src={firstPhoto} alt={p.title} className="w-full h-full object-cover" />
                   <div className="absolute top-3 right-3"><Badge status={p.status} /></div>
+                  {allPhotos.length > 1 && (
+                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <i className="bi bi-images"></i> {allPhotos.length}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="h-2 bg-gradient-to-r from-teal-500 to-cyan-400"></div>
@@ -119,7 +183,7 @@ export default function PropertiesPage() {
                       <i className="bi bi-geo-alt text-xs"></i>{p.location}
                     </p>
                   </div>
-                  {!getPhoto(p) && <Badge status={p.status} />}
+                  {!firstPhoto && <Badge status={p.status} />}
                 </div>
                 <div className="flex items-center gap-1.5 mb-3">
                   <i className="bi bi-cash-stack text-teal-500 text-sm"></i>
@@ -188,8 +252,9 @@ export default function PropertiesPage() {
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
+</div>
+            );
+          })}
         </div>
       )}
 
@@ -212,27 +277,37 @@ export default function PropertiesPage() {
               </FormField>
             </div>
 
-            <FormField label="Property Photo (optional)">
-              <div className="flex items-center gap-3">
-                {photoPreview ? (
-                  <img src={photoPreview} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
-                ) : (
-                  <div className="w-16 h-16 rounded-xl bg-gray-50 border border-dashed border-gray-300 flex items-center justify-center text-gray-300">
-                    <i className="bi bi-image text-xl"></i>
+<FormField label="Property Photos (optional — select multiple)">
+              <div className="space-y-2">
+                {/* Photo grid previews */}
+                {photoPreviews.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {photoPreviews.map((preview, idx) => (
+                      <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 group">
+                        <img src={preview} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(idx)}
+                          className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
-                <label className="cursor-pointer px-4 py-2.5 text-sm font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 transition-colors flex items-center gap-2">
+                <label className="inline-flex cursor-pointer px-4 py-2.5 text-sm font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 transition-colors items-center gap-2">
                   <i className="bi bi-upload"></i>
-                  {photoPreview ? 'Change Photo' : 'Upload Photo'}
-                  <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                  {photoPreviews.length > 0 ? 'Add More Photos' : 'Upload Photos'}
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotosChange} />
                 </label>
-                {photoPreview && (
-                  <button type="button" onClick={() => { setPhoto(null); setPhotoPreview(null) }} className="text-xs text-red-500 hover:text-red-600">
-                    Remove
+                {photoPreviews.length > 0 && (
+                  <button type="button" onClick={() => { setPhotos([]); setPhotoPreviews([]) }} className="ml-2 text-xs text-red-500 hover:text-red-600">
+                    Remove All
                   </button>
                 )}
               </div>
-              <p className="text-[11px] text-gray-400 mt-1.5">Photos are stored locally in your browser for demo (backend photo upload is Phase 2).</p>
+              <p className="text-[11px] text-gray-400 mt-1.5">Select multiple images at once. Photos are stored locally for demo.</p>
             </FormField>
 
             <FormField label="Status">
