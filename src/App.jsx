@@ -68,114 +68,59 @@ export default function App() {
     { path: '/houses/register', element: <RegisterPage /> },
     { path: '/houses/:id', element: <PropertyDetailPage /> },
 
-    // Protected routes — tenant must be logged in
+// Protected routes — tenant must be logged in.
+    // allowUnregisteredTenant: self-registered tenants (browsing/applying via
+    // house-hunting) are allowed here even before a landlord links them to a house.
     {
       path: '/houses/dashboard',
-      element: <ProtectedRoute allowedRoles={['tenant']}><TenantDashboardPage /></ProtectedRoute>
+      element: <ProtectedRoute allowedRoles={['tenant']} allowUnregisteredTenant><TenantDashboardPage /></ProtectedRoute>
     },
     {
       path: '/houses/my-requests',
-      element: <ProtectedRoute allowedRoles={['tenant']}><MyRequestsPage /></ProtectedRoute>
+      element: <ProtectedRoute allowedRoles={['tenant']} allowUnregisteredTenant><MyRequestsPage /></ProtectedRoute>
     },
 
     // =====================
     // LANDLORD / ADMIN PORTAL (Private)
     // =====================
 
-    // Shared Dashboard — all roles (landlord / admin / tenant)
-    {
+// Shared Dashboard — all roles (landlord / admin / tenant)
+    // All dashboard sub-routes are NESTED so they share the Dashboard layout
+    // (sidebar, header, horizontal top nav bar) via <Outlet />.
+{
       path: '/dashboard',
       element: (
-        <ProtectedRoute allowedRoles={['landlord', 'admin', 'tenant']}>
+        <ProtectedRoute allowedRoles={['landlord', 'admin', 'tenant']} allowUnregisteredTenant>
           <DashboardPage />
         </ProtectedRoute>
-      )
-    },
+      ),
+      children: [
+        // Landlord Only Routes
+        { path: 'properties', element: <ProtectedRoute allowedRoles={['landlord']}><PropertiesPage /></ProtectedRoute> },
+        { path: 'tenants', element: <ProtectedRoute allowedRoles={['landlord']}><TenantsPage /></ProtectedRoute> },
+        { path: 'leases', element: <ProtectedRoute allowedRoles={['landlord']}><LeasesPage /></ProtectedRoute> },
+        { path: 'requests', element: <ProtectedRoute allowedRoles={['landlord']}><RequestsPage /></ProtectedRoute> },
+        { path: 'meetings', element: <ProtectedRoute allowedRoles={['landlord']}><MeetingsPage /></ProtectedRoute> },
+        { path: 'notices', element: <ProtectedRoute allowedRoles={['landlord']}><NoticesPage /></ProtectedRoute> },
+        { path: 'register-tenant', element: <ProtectedRoute allowedRoles={['landlord']}><RegisterTenantPage /></ProtectedRoute> },
+        { path: 'payments', element: <ProtectedRoute allowedRoles={['landlord', 'tenant']}><RoleSwitch role="payments" /></ProtectedRoute> },
+        { path: 'maintenance', element: <ProtectedRoute allowedRoles={['landlord', 'tenant']}><RoleSwitch role="maintenance" /></ProtectedRoute> },
 
-    // Landlord Only Routes
-    {
-      path: '/dashboard/properties',
-      element: <ProtectedRoute allowedRoles={['landlord']}><PropertiesPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/tenants',
-      element: <ProtectedRoute allowedRoles={['landlord']}><TenantsPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/leases',
-      element: <ProtectedRoute allowedRoles={['landlord']}><LeasesPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/requests',
-      element: <ProtectedRoute allowedRoles={['landlord']}><RequestsPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/meetings',
-      element: <ProtectedRoute allowedRoles={['landlord']}><MeetingsPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/notices',
-      element: <ProtectedRoute allowedRoles={['landlord']}><NoticesPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/register-tenant',
-      element: <ProtectedRoute allowedRoles={['landlord']}><RegisterTenantPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/payments',
-      element: <ProtectedRoute allowedRoles={['landlord', 'tenant']}><RoleSwitch role="payments" /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/maintenance',
-      element: <ProtectedRoute allowedRoles={['landlord', 'tenant']}><RoleSwitch role="maintenance" /></ProtectedRoute>
-    },
+        // Tenant Only Routes (Main Portal)
+        { path: 'my-property', element: <ProtectedRoute allowedRoles={['tenant']}><MyPropertyPage /></ProtectedRoute> },
+        { path: 'tenant-payments', element: <ProtectedRoute allowedRoles={['tenant']}><TenantPaymentsPage /></ProtectedRoute> },
+        { path: 'my-requests', element: <ProtectedRoute allowedRoles={['tenant']}><TenantRentalRequestsPage /></ProtectedRoute> },
+        { path: 'my-notices', element: <ProtectedRoute allowedRoles={['tenant']}><TenantNoticesPage /></ProtectedRoute> },
 
-    // Tenant Only Routes (Main Portal)
-    {
-      path: '/dashboard/my-property',
-      element: <ProtectedRoute allowedRoles={['tenant']}><MyPropertyPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/tenant-payments',
-      element: <ProtectedRoute allowedRoles={['tenant']}><TenantPaymentsPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/my-requests',
-      element: <ProtectedRoute allowedRoles={['tenant']}><TenantRentalRequestsPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/my-notices',
-      element: <ProtectedRoute allowedRoles={['tenant']}><TenantNoticesPage /></ProtectedRoute>
-    },
-
-    // Admin Only Routes
-    {
-      path: '/dashboard/admin/users',
-      element: <ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/admin/create-landlord',
-      element: <ProtectedRoute allowedRoles={['admin']}><AdminCreateLandlordPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/admin/leases',
-      element: <ProtectedRoute allowedRoles={['admin']}><AdminLeasesPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/admin/payments',
-      element: <ProtectedRoute allowedRoles={['admin']}><AdminPaymentsPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/admin/maintenance',
-      element: <ProtectedRoute allowedRoles={['admin']}><AdminMaintenancePage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/admin/notices',
-      element: <ProtectedRoute allowedRoles={['admin']}><AdminNoticesPage /></ProtectedRoute>
-    },
-    {
-      path: '/dashboard/admin/rental-requests',
-      element: <ProtectedRoute allowedRoles={['admin']}><AdminRentalRequestsPage /></ProtectedRoute>
+        // Admin Only Routes
+        { path: 'admin/users', element: <ProtectedRoute allowedRoles={['admin']}><AdminUsersPage /></ProtectedRoute> },
+        { path: 'admin/create-landlord', element: <ProtectedRoute allowedRoles={['admin']}><AdminCreateLandlordPage /></ProtectedRoute> },
+        { path: 'admin/leases', element: <ProtectedRoute allowedRoles={['admin']}><AdminLeasesPage /></ProtectedRoute> },
+        { path: 'admin/payments', element: <ProtectedRoute allowedRoles={['admin']}><AdminPaymentsPage /></ProtectedRoute> },
+        { path: 'admin/maintenance', element: <ProtectedRoute allowedRoles={['admin']}><AdminMaintenancePage /></ProtectedRoute> },
+        { path: 'admin/notices', element: <ProtectedRoute allowedRoles={['admin']}><AdminNoticesPage /></ProtectedRoute> },
+        { path: 'admin/rental-requests', element: <ProtectedRoute allowedRoles={['admin']}><AdminRentalRequestsPage /></ProtectedRoute> },
+      ]
     },
 
     { path: '*', element: <NotFound /> },

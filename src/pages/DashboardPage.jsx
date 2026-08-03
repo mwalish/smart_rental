@@ -109,9 +109,17 @@ export default function DashboardPage() {
     fetchStats()
   }, [user])
 
-  const navLinks = user?.role === 'admin' ? ADMIN_NAV : user?.role === 'landlord' ? LANDLORD_NAV : TENANT_NAV
+const navLinks = user?.role === 'admin' ? ADMIN_NAV : user?.role === 'landlord' ? LANDLORD_NAV : TENANT_NAV
   const displayName = profile?.full_name || user?.name || user?.username || 'User'
   const isOverview = location.pathname === '/dashboard'
+
+  // A tenant is only "registered" (linked to a house) once a landlord has
+  // registered them (registered_by set) or they hold an active lease.
+  // Self-registered tenants (house-hunting) are NOT linked to any house yet.
+  const isTenantRegistered =
+    user?.role !== 'tenant' ||
+    !!(profile?.registered_by_name || profile?.registered_by) ||
+    !!(profile?.active_lease || profile?.has_lease)
 
   const isActive = (link) => {
     if (link.exact) return location.pathname === link.to
@@ -121,9 +129,33 @@ export default function DashboardPage() {
 const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
+  const [notifFilter, setNotifFilter] = useState('all') // 'all' | 'tenant' | 'guest'
+  // Track which notification ids have been read (persisted in localStorage)
+  const [readNotifs, setReadNotifs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('read_notifs') || '[]') } catch { return [] }
+  })
 
+  // Persist read notifications
   useEffect(() => {
-    // Fetch pending notifications
+    try { localStorage.setItem('read_notifs', JSON.stringify(readNotifs)) } catch { /* ignore */ }
+  }, [readNotifs])
+
+  const markRead = (id) => {
+    setReadNotifs(prev => prev.includes(id) ? prev : [...prev, id])
+  }
+
+  const markAllRead = () => {
+    setReadNotifs(prev => [...new Set([...prev, ...notifications.map(n => n.id)])])
+  }
+
+useEffect(() => {
+    // Fetch pending notifications — but ONLY for users who are entitled to them.
+    // A self-registered tenant (not registered by a landlord) is not linked to
+    // any house, so they must not get tenant notifications.
+    if (user?.role === 'tenant' && !isTenantRegistered) {
+      setNotifications([])
+      return
+    }
     const fetchNotifs = async () => {
       try {
         const [reqRes, maintRes, noticeRes] = await Promise.all([
@@ -132,26 +164,46 @@ const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
           api.get('core/notices/').catch(() => null),
         ])
         const items = []
-        // pending requests
+        // pending requests — guest (lead) vs tenant determined by whether a tenant is linked
         const requests = reqRes?.data?.rental_requests || reqRes?.data || []
         requests.filter(r => r.status === 'PENDING').forEach(r => {
-          items.push({ id: `req-${r.id}`, type: 'request', text: `New rental request from ${r.tenant_name || r.lead_name || 'someone'}`, link: '/dashboard/requests', time: r.created_at })
+          const isTenant = !!(r.tenant || r.tenant_id)
+          items.push({
+            id: `req-${r.id}`,
+            type: 'request',
+            audience: isTenant ? 'tenant' : 'guest',
+            text: `${isTenant ? 'Tenant' : 'Guest'} request from ${r.tenant_name || r.lead_name || 'someone'}`,
+            link: '/dashboard/requests',
+            time: r.created_at,
+          })
         })
-// pending maintenance
+        // pending maintenance — tenant
         const maint = maintRes?.data?.maintenance_requests || maintRes?.data || []
         maint.filter(m => m.status === 'PENDING').forEach(m => {
-          items.push({ id: `maint-${m.id}`, type: 'maintenance', text: `Maintenance: ${m.title || m.description || 'New request'}`, link: '/dashboard/maintenance', time: m.created_at })
+          items.push({ id: `maint-${m.id}`, type: 'maintenance', audience: 'tenant', text: `Maintenance: ${m.title || m.description || 'New request'}`, link: '/dashboard/maintenance', time: m.created_at })
         })
-        // recent notices
+        // recent notices — tenant
         const notices = noticeRes?.data?.notices || noticeRes?.data || []
         notices.slice(0, 3).forEach(n => {
-          items.push({ id: `notice-${n.id}`, type: 'notice', text: `Notice: ${n.title}`, link: '/dashboard/notices', time: n.created_at })
+          items.push({ id: `notice-${n.id}`, type: 'notice', audience: 'tenant', text: `Notice: ${n.title}`, link: '/dashboard/notices', time: n.created_at })
         })
         setNotifications(items.sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0)).slice(0, 10))
       } catch (e) { /* silent */ }
     }
     fetchNotifs()
-  }, [])
+  }, [isTenantRegistered])
+
+  // Filter notifications by audience (tenant vs guest)
+  const filteredNotifications = notifFilter === 'all'
+    ? notifications
+    : notifications.filter(n => n.audience === notifFilter)
+
+  // Unread count = notifications not yet marked read
+  const unreadCount = notifications.filter(n => !readNotifs.includes(n.id)).length
+
+  // Counts per audience for the tabs
+  const tenantCount = notifications.filter(n => n.audience === 'tenant').length
+  const guestCount = notifications.filter(n => n.audience === 'guest').length
 
   // Close notifications on click outside
   useEffect(() => {
@@ -308,22 +360,23 @@ const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-100 px-4 sm:px-6 flex items-center justify-between shrink-0 shadow-sm">
-          <div className="flex items-center gap-3 min-w-0">
-            {/* Mobile hamburger */}
-            <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors shrink-0">
-              <i className="bi bi-list text-lg"></i>
-            </button>
-            <h1 className="text-lg font-bold text-gray-900 truncate">
-              {navLinks.find(l => isActive(l))?.label || 'Dashboard'}
-            </h1>
-          </div>
+<header className="shrink-0 shadow-sm">
+          <div className="h-16 bg-white border-b border-gray-100 px-4 sm:px-6 flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              {/* Mobile hamburger */}
+              <button onClick={() => setMobileSidebarOpen(true)} className="lg:hidden w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors shrink-0">
+                <i className="bi bi-list text-lg"></i>
+              </button>
+              <h1 className="text-lg font-bold text-gray-900 truncate">
+                {navLinks.find(l => isActive(l))?.label || 'Dashboard'}
+              </h1>
+            </div>
 <div className="flex items-center gap-3 shrink-0">
             <div className="notif-wrapper relative">
-              <button onClick={() => setNotifOpen(!notifOpen)} className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors relative">
+<button onClick={() => setNotifOpen(!notifOpen)} className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors relative">
                 <i className="bi bi-bell text-base"></i>
-                {notifications.length > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-teal-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">{notifications.length > 9 ? '9+' : notifications.length}</span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">{unreadCount > 9 ? '9+' : unreadCount}</span>
                 )}
               </button>
               {/* Notification dropdown */}
@@ -331,42 +384,88 @@ const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
                 <div className="fixed sm:absolute top-16 sm:top-full right-0 sm:right-0 left-0 sm:left-auto sm:w-80 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 animate-fade-up max-h-[80vh] flex flex-col">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
                     <p className="text-sm font-bold text-gray-900">Notifications</p>
-                    {notifications.length > 0 && (
-                      <span className="text-xs text-gray-400">{notifications.length} new</span>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="text-xs font-semibold text-teal-600 hover:text-teal-700">
+                        Mark all read
+                      </button>
                     )}
                   </div>
+
+                  {/* Audience filter tabs: All / Tenants / Guests */}
+                  <div className="flex gap-1 px-3 py-2 border-b border-gray-100 shrink-0">
+                    {[
+                      { key: 'all', label: 'All', count: notifications.length },
+                      { key: 'tenant', label: 'Tenants', count: tenantCount },
+                      { key: 'guest', label: 'Guests', count: guestCount },
+                    ].map(t => (
+                      <button
+                        key={t.key}
+                        onClick={() => setNotifFilter(t.key)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                          notifFilter === t.key
+                            ? 'bg-teal-600 text-white'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                      >
+                        {t.label}
+                        <span className={`text-[10px] px-1.5 rounded-full ${notifFilter === t.key ? 'bg-white/20' : 'bg-gray-200'}`}>{t.count}</span>
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="overflow-y-auto flex-1">
-                    {notifications.length === 0 ? (
+                    {filteredNotifications.length === 0 ? (
                       <div className="text-center py-10 text-gray-400">
                         <i className="bi bi-bell-slash text-3xl block mb-2 opacity-40"></i>
                         <p className="text-sm">No notifications yet</p>
                       </div>
                     ) : (
                       <div className="divide-y divide-gray-50">
-                        {notifications.map(n => (
-                          <Link
-                            key={n.id}
-                            to={n.link}
-                            onClick={() => setNotifOpen(false)}
-                            className="flex items-start gap-3 px-4 py-3 hover:bg-teal-50 transition-colors"
-                          >
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0 mt-0.5 ${
-                              n.type === 'request' ? 'bg-violet-100 text-violet-700' :
-                              n.type === 'maintenance' ? 'bg-orange-100 text-orange-700' :
-                              'bg-blue-100 text-blue-700'
-                            }`}>
-                              <i className={`bi ${
-                                n.type === 'request' ? 'bi-envelope' :
-                                n.type === 'maintenance' ? 'bi-tools' :
-                                'bi-megaphone'
-                              } text-sm`}></i>
+                        {filteredNotifications.map(n => {
+                          const isRead = readNotifs.includes(n.id)
+                          return (
+                            <div
+                              key={n.id}
+                              className={`flex items-start gap-3 px-4 py-3 transition-colors ${isRead ? 'opacity-50' : 'hover:bg-teal-50'}`}
+                            >
+                              <Link to={n.link} onClick={() => setNotifOpen(false)} className="flex items-start gap-3 min-w-0 flex-1">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs shrink-0 mt-0.5 ${
+                                  n.type === 'request' ? 'bg-violet-100 text-violet-700' :
+                                  n.type === 'maintenance' ? 'bg-orange-100 text-orange-700' :
+                                  'bg-blue-100 text-blue-700'
+                                }`}>
+                                  <i className={`bi ${
+                                    n.type === 'request' ? 'bi-envelope' :
+                                    n.type === 'maintenance' ? 'bi-tools' :
+                                    'bi-megaphone'
+                                  } text-sm`}></i>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold uppercase ${
+                                      n.audience === 'tenant' ? 'bg-teal-50 text-teal-700' : 'bg-amber-50 text-amber-700'
+                                    }`}>
+                                      {n.audience === 'tenant' ? 'Tenant' : 'Guest'}
+                                    </span>
+                                    {!isRead && <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>}
+                                  </div>
+                                  <p className="text-sm text-gray-700 leading-snug mt-1">{n.text}</p>
+                                  {n.time && <p className="text-xs text-gray-400 mt-0.5">{new Date(n.time).toLocaleDateString()}</p>}
+                                </div>
+                              </Link>
+                              {/* Clear button — only shows if unread (red dot) */}
+                              {!isRead && (
+                                <button
+                                  title="Mark as read"
+                                  onClick={() => markRead(n.id)}
+                                  className="shrink-0 w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 flex items-center justify-center transition-colors"
+                                >
+                                  <i className="bi bi-check-lg text-sm"></i>
+                                </button>
+                              )}
                             </div>
-                            <div className="min-w-0">
-                              <p className="text-sm text-gray-700 leading-snug">{n.text}</p>
-                              {n.time && <p className="text-xs text-gray-400 mt-0.5">{new Date(n.time).toLocaleDateString()}</p>}
-                            </div>
-                          </Link>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -389,11 +488,34 @@ const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
                 {displayName.charAt(0).toUpperCase()}
               </div>
             </div>
-            {/* Mobile avatar only */}
+{/* Mobile avatar only */}
             <div className="sm:hidden w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center font-bold text-white text-sm shadow">
               {displayName.charAt(0).toUpperCase()}
             </div>
           </div>
+          </div>
+
+          {/* ── Horizontal Navigation Bar (top nav) ── */}
+          <nav className="hidden md:flex bg-white border-b border-gray-100 px-4 sm:px-6 gap-1 overflow-x-auto">
+            {navLinks.map(link => {
+              const active = isActive(link)
+              return (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  onClick={() => handleNav(link.to)}
+                  className={`flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors shrink-0
+                    ${active
+                      ? 'border-teal-500 text-teal-700 bg-teal-50/50'
+                      : 'border-transparent text-gray-500 hover:text-teal-600 hover:border-gray-200'
+                    }`}
+                >
+                  <i className={`bi ${link.icon} text-sm ${active ? 'text-teal-600' : 'text-gray-400'}`}></i>
+                  {link.label}
+                </Link>
+              )
+            })}
+          </nav>
         </header>
 
 {/* Content */}
@@ -411,6 +533,26 @@ const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
                   <p className="text-slate-400 text-sm">Here's what's happening with your {user?.role === 'landlord' ? 'properties' : 'rental'} today.</p>
                 </div>
               </div>
+
+              {/* ── Unregistered tenant banner ── */}
+              {user?.role === 'tenant' && !isTenantRegistered && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                    <i className="bi bi-hourglass-split text-amber-600 text-lg"></i>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-amber-900">Pending landlord registration</p>
+                    <p className="text-sm text-amber-700 mt-0.5">
+                      Your account is not yet linked to a house. Once a landlord registers you and assigns a
+                      property, you'll get access to payments, maintenance, and notices. You can keep browsing
+                      and applying for properties in the meantime.
+                    </p>
+                    <Link to="/houses" className="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold text-amber-800 hover:text-amber-900">
+                      Browse properties <i className="bi bi-arrow-right"></i>
+                    </Link>
+                  </div>
+                </div>
+              )}
 
               {/* Stats */}
               {loading ? (

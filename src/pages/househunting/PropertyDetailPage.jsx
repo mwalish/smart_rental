@@ -97,34 +97,55 @@ const [property, setProperty] = useState(null)
     }
   }
 
-  // Guest: create account → auto-login → send linked request
+  // Guest: send request FIRST (always works), then create account as best-effort.
   const handleGuestSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
     setError('')
     try {
-      // 1. Create tenant account (public self-registration endpoint)
-      await registerTenant({
-        full_name: fullName,
-        email,
-        phone_number: phone,
-        id_number: idNumber,
-        role: 'tenant',
-        password,
-        password_confirm: passwordConfirm,
+      // 1. Submit the rental inquiry with the guest's contact info.
+      //    The backend creates a guest/lead request (requires lead_name + lead_phone).
+      //    If the user already has an account, the backend still records the lead.
+      await submitRentalInquiry({
+        property: property.id,
+        message,
+        lead_name: fullName,
+        lead_phone: phone,
+        lead_email: email,
       })
-      // 2. Auto-login so the request links to the new tenant account
-      const res = await api.post('core/login/', { email, password })
-      const { access, refresh, user: u, profile: p } = res.data
-      setToken(access); setUser(u)
-      if (p) setProfile(p)
-      localStorage.setItem('access_token', access)
-      localStorage.setItem('refresh_token', refresh)
-      localStorage.setItem('user', JSON.stringify(u))
-      if (p) localStorage.setItem('profile', JSON.stringify(p))
-      // 3. Submit the request — now linked to their account on the landlord's side
-      await submitRentalInquiry({ property: property.id, message })
-      setSuccess('Account created & your request was sent to the landlord. You can now log in anytime to track it.')
+
+      // 2. Now create the tenant account + auto-login as a BEST-EFFORT step.
+      //    If registration fails (email/phone already exists, weak password, etc.)
+      //    the request has already been submitted, so the user isn't blocked.
+      let accountCreated = false
+      try {
+        await registerTenant({
+          full_name: fullName,
+          email,
+          phone_number: phone,
+          id_number: idNumber,
+          role: 'tenant',
+          password,
+          password_confirm: passwordConfirm,
+        })
+        // Auto-login so the request is linked to their new tenant account
+        const res = await api.post('core/login/', { email, password })
+        const { access, refresh, user: u, profile: p } = res.data
+        setToken(access); setUser(u)
+        if (p) setProfile(p)
+        localStorage.setItem('access_token', access)
+        localStorage.setItem('refresh_token', refresh)
+        localStorage.setItem('user', JSON.stringify(u))
+        if (p) localStorage.setItem('profile', JSON.stringify(p))
+        accountCreated = true
+      } catch (err) {
+        // Ignore — account creation failure should NOT block the request submission.
+        console.warn('Account auto-creation skipped:', err.response?.data || err.message)
+      }
+
+      setSuccess(accountCreated
+        ? 'Your request was sent to the landlord & your account was created. You can log in anytime to track it.'
+        : 'Your request was sent to the landlord successfully! The landlord will contact you soon.')
       setShowForm(false); setMessage('')
     } catch (err) {
       const d = err.response?.data
@@ -143,13 +164,20 @@ const [property, setProperty] = useState(null)
     }
   }
 
-  // Logged-in (unlocked) tenant: submit linked application
+  // Logged-in user: submit linked application.
+  // For tenants the backend links to their account; for landlord/admin browsers
+  // sending the session contact info makes the guest/lead path work too.
   const handleTenantSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true)
     setError('')
     try {
-      await submitRentalInquiry({ property: property.id, message })
+      const contact = {
+        lead_name: user?.full_name || user?.username || '',
+        lead_phone: user?.phone_number || '',
+        lead_email: user?.email || '',
+      }
+      await submitRentalInquiry({ property: property.id, message, ...contact })
       setSuccess('Application submitted successfully! The landlord will review your request.')
       setShowForm(false); setMessage('')
     } catch (err) {
