@@ -16,6 +16,7 @@ const LANDLORD_NAV = [
   { to: '/dashboard/meetings', label: 'Meetings', icon: 'bi-calendar2-check-fill' },
   { to: '/dashboard/notices', label: 'Notices', icon: 'bi-megaphone-fill' },
   { to: '/dashboard/register-tenant', label: 'Register Tenant', icon: 'bi-person-plus-fill' },
+  { to: '/dashboard/profile', label: 'My Profile', icon: 'bi-person-circle' },
 ]
 
 const ADMIN_NAV = [
@@ -25,8 +26,9 @@ const ADMIN_NAV = [
   { to: '/dashboard/admin/leases', label: 'All Leases', icon: 'bi-file-earmark-text-fill' },
   { to: '/dashboard/admin/payments', label: 'All Payments', icon: 'bi-cash-stack' },
   { to: '/dashboard/admin/maintenance', label: 'Maintenance', icon: 'bi-tools' },
-  { to: '/dashboard/admin/notices', label: 'Notices', icon: 'bi-megaphone-fill' },
+{ to: '/dashboard/admin/notices', label: 'Notices', icon: 'bi-megaphone-fill' },
   { to: '/dashboard/admin/rental-requests', label: 'Rental Requests', icon: 'bi-envelope-fill' },
+  { to: '/dashboard/profile', label: 'My Profile', icon: 'bi-person-circle' },
 ]
 
 const TENANT_NAV = [
@@ -36,6 +38,7 @@ const TENANT_NAV = [
   { to: '/dashboard/maintenance', label: 'Maintenance', icon: 'bi-tools' },
   { to: '/dashboard/my-requests', label: 'Rental Requests', icon: 'bi-envelope-fill' },
   { to: '/dashboard/my-notices', label: 'Notices', icon: 'bi-megaphone-fill' },
+  { to: '/dashboard/profile', label: 'My Profile', icon: 'bi-person-circle' },
 ]
 
 const LANDLORD_STATS = [
@@ -111,6 +114,27 @@ export default function DashboardPage() {
 
 const navLinks = user?.role === 'admin' ? ADMIN_NAV : user?.role === 'landlord' ? LANDLORD_NAV : TENANT_NAV
   const displayName = profile?.full_name || user?.name || user?.username || 'User'
+
+  // Profile picture helper — renders either the uploaded image or a name initial.
+  const MEDIA_BASE = 'http://127.0.0.1:8000'
+  const picSrc = profile?.profile_picture || null
+  const toAbsolute = (p) => {
+    if (!p) return ''
+    if (p.startsWith('http')) return p
+    return `${MEDIA_BASE}${p.startsWith('/') ? '' : '/'}${p}`
+  }
+  const Avatar = ({ className = 'w-9 h-9 text-sm', textClass = 'text-sm' }) => picSrc ? (
+    <img
+      src={toAbsolute(picSrc)}
+      alt={displayName}
+      className={`${className} rounded-full object-cover shrink-0`}
+    />
+  ) : (
+    <div className={`${className} rounded-full bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center font-bold text-white shrink-0 ${textClass}`}>
+      {displayName.charAt(0).toUpperCase()}
+    </div>
+  )
+
   const isOverview = location.pathname === '/dashboard'
 
   // A tenant is only "registered" (linked to a house) once a landlord has
@@ -253,8 +277,8 @@ useEffect(() => {
         {/* User pill */}
         {sidebarOpen && (
           <div className="mx-3 mt-4 p-3 bg-slate-800 rounded-xl flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-400 to-cyan-300 flex items-center justify-center font-bold text-white text-sm shrink-0">
-              {displayName.charAt(0).toUpperCase()}
+            <div className="relative">
+              <Avatar className="w-9 h-9 text-sm" textClass="text-sm" />
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-semibold truncate">{displayName}</p>
@@ -317,10 +341,8 @@ useEffect(() => {
             <i className="bi bi-x-lg text-sm"></i>
           </button>
         </div>
-        <div className="mx-3 mt-4 p-3 bg-slate-800 rounded-xl flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-400 to-cyan-300 flex items-center justify-center font-bold text-white text-sm shrink-0">
-            {displayName.charAt(0).toUpperCase()}
-          </div>
+<div className="mx-3 mt-4 p-3 bg-slate-800 rounded-xl flex items-center gap-3">
+          <Avatar className="w-9 h-9 text-sm" textClass="text-sm" />
           <div className="min-w-0">
             <p className="text-white text-sm font-semibold truncate">{displayName}</p>
             <p className="text-slate-400 text-xs capitalize">{user?.role}</p>
@@ -479,18 +501,16 @@ useEffect(() => {
                 </div>
               )}
             </div>
-            <div className="hidden sm:flex items-center gap-2.5 pl-3 border-l border-gray-100">
+<div className="hidden sm:flex items-center gap-2.5 pl-3 border-l border-gray-100">
               <div className="text-right">
                 <p className="text-sm font-semibold text-gray-800 leading-none">{displayName}</p>
                 <p className="text-xs text-gray-400 capitalize mt-0.5">{user?.role}</p>
               </div>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center font-bold text-white text-sm shadow">
-                {displayName.charAt(0).toUpperCase()}
-              </div>
+              <Avatar className="w-9 h-9 text-sm shadow" textClass="text-sm" />
             </div>
 {/* Mobile avatar only */}
-            <div className="sm:hidden w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center font-bold text-white text-sm shadow">
-              {displayName.charAt(0).toUpperCase()}
+            <div className="sm:hidden">
+              <Avatar className="w-9 h-9 text-sm shadow" textClass="text-sm" />
             </div>
           </div>
           </div>
@@ -720,6 +740,7 @@ useEffect(() => {
               )}
 
               {/* Quick links */}
+              {user?.role !== 'admin' && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5">
                 <p className="text-sm font-bold text-gray-700 mb-4">Quick Actions</p>
                 <div className="flex flex-wrap gap-2">
@@ -731,6 +752,7 @@ useEffect(() => {
                   ))}
                 </div>
               </div>
+              )}
             </div>
           ) : (
             <Outlet />

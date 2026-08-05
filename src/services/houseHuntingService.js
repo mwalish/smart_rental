@@ -33,6 +33,19 @@ export const submitRentalInquiry = async (data) => {
   return res.data
 }
 
+/**
+ * Public guest request-status lookup — NO login required.
+ * Guests who submitted a rental inquiry can check its current status
+ * by providing the phone number or email they used.
+ *
+ * @param {{phone?: string, email?: string}} data  at least one identifier
+ * @returns {Promise<{requests: Array}>}
+ */
+export const trackRequestStatus = async (data) => {
+  const res = await api.post('core/house-hunting/request-status/', data)
+  return res.data
+}
+
 /** Get logged-in tenant's rental requests */
 export const getMyRequests = async () => {
   const res = await api.get('core/rental-requests/')

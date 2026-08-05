@@ -47,11 +47,15 @@ export default function AdminUsersPage() {
             <Tr key={u.id}>
               <Td>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-cyan-300 flex items-center justify-center font-bold text-white text-xs shrink-0">
-                    {u.username?.charAt(0).toUpperCase()}
-                  </div>
+                  {u.profile_picture ? (
+                    <img src={u.profile_picture.startsWith('http') ? u.profile_picture : `http://127.0.0.1:8000${u.profile_picture.startsWith('/') ? '' : '/'}${u.profile_picture}`} alt={u.full_name || u.username} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-cyan-300 flex items-center justify-center font-bold text-white text-xs shrink-0">
+                      {(u.full_name || u.username || '?').charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <div>
-                    <p className="font-semibold text-gray-900 text-sm">{u.username}</p>
+                    <p className="font-semibold text-gray-900 text-sm">{u.full_name || u.username}</p>
                     <p className="text-xs text-gray-400">{u.email}</p>
                   </div>
                 </div>

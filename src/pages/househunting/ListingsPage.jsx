@@ -110,7 +110,10 @@ export default function ListingsPage() {
             <span className="text-lg font-black text-gray-900">Smart<span className="text-teal-600">Rent</span></span>
           </Link>
 
-          <div className="flex items-center gap-4">
+<div className="flex items-center gap-4">
+            <Link to="/houses/track-request" className="hidden sm:flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-teal-600 transition-colors">
+              <i className="bi bi-search"></i> Track Request
+            </Link>
             <Link to="/houses/register" className="hidden sm:block text-sm font-semibold text-teal-700 border-2 border-teal-200 px-4 py-2 rounded-xl hover:border-teal-400 hover:bg-teal-50 transition-all">
               <i className="bi bi-person-plus mr-1"></i>Create Account
             </Link>

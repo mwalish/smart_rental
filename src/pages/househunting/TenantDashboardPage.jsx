@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { to: '/houses/dashboard', label: 'Overview', icon: 'bi-grid-1x2-fill', exact: true },
   { to: '/houses', label: 'Browse Properties', icon: 'bi-building' },
   { to: '/houses/my-requests', label: 'My Applications', icon: 'bi-envelope-fill' },
+  { to: '/houses/track-request', label: 'Track Request', icon: 'bi-search' },
 ]
 
 export default function TenantDashboardPage() {
@@ -25,7 +26,15 @@ export default function TenantDashboardPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const displayName = profile?.full_name || user?.name || user?.username || 'Tenant'
+const displayName = profile?.full_name || user?.name || user?.username || 'Tenant'
+  // Profile picture helper — renders the uploaded image or a name initial.
+  const MEDIA_BASE = 'http://127.0.0.1:8000'
+  const picSrc = profile?.profile_picture || null
+  const toAbsolute = (p) => {
+    if (!p) return ''
+    if (p.startsWith('http')) return p
+    return `${MEDIA_BASE}${p.startsWith('/') ? '' : '/'}${p}`
+  }
   const isOverview = location.pathname === '/houses/dashboard'
 
   const isActive = (link) => {
@@ -70,9 +79,13 @@ export default function TenantDashboardPage() {
                 <p className="text-sm font-semibold text-gray-800">{displayName}</p>
                 <p className="text-xs text-gray-400">Tenant</p>
               </div>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center font-bold text-white text-sm shadow">
-                {displayName[0].toUpperCase()}
-              </div>
+{picSrc ? (
+                <img src={toAbsolute(picSrc)} alt={displayName} className="w-9 h-9 rounded-full object-cover shadow" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center font-bold text-white text-sm shadow">
+                  {displayName[0].toUpperCase()}
+                </div>
+              )}
               <button onClick={Logout} className="ml-2 p-2 text-gray-400 hover:text-red-500 transition-colors" title="Logout">
                 <i className="bi bi-box-arrow-right"></i>
               </button>
@@ -160,6 +173,15 @@ export default function TenantDashboardPage() {
                 <div>
                   <p className="font-bold text-gray-900">My Applications</p>
                   <p className="text-xs text-gray-400 mt-0.5">Track your rental requests</p>
+                </div>
+              </Link>
+              <Link to="/houses/track-request" className="bg-white rounded-2xl p-6 border border-gray-100 stat-card flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-400 flex items-center justify-center shadow-md shrink-0">
+                  <i className="bi bi-search text-white text-lg"></i>
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">Track Request</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Look up a request by phone or email</p>
                 </div>
               </Link>
             </div>

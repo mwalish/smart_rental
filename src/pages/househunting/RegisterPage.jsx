@@ -25,6 +25,10 @@ export default function RegisterPage() {
       password: formData.get('password'),
       password_confirm: formData.get('password_confirm'),
     }
+    // The backend UserRegistrationSerializer stores the phone under 'phone_number'
+    // (the User model field). The form input is named 'phone' — send both so the
+    // serializer always receives the correctly-named field.
+    payload.phone_number = payload.phone_number || payload.phone
 
     try {
       // Public tenant self-registration — reuses existing backend endpoint
@@ -255,4 +259,3 @@ export default function RegisterPage() {
     </div>
   )
 }
-

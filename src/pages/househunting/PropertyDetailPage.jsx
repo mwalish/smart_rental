@@ -244,7 +244,12 @@ const [property, setProperty] = useState(null)
             <i className="bi bi-check-circle-fill text-green-500 mt-0.5 shrink-0"></i>
             <div>
               <p className="text-green-700 text-sm font-medium">{success}</p>
-              <Link to="/houses" className="text-green-600 text-sm underline mt-2 inline-block">Browse more properties →</Link>
+              <div className="flex flex-wrap items-center gap-4 mt-2.5">
+                <Link to="/houses/track-request" className="text-green-700 text-sm font-semibold underline inline-flex items-center gap-1">
+                  <i className="bi bi-search"></i> Track your request status →
+                </Link>
+                <Link to="/houses" className="text-green-600 text-sm underline inline-block">Browse more properties →</Link>
+              </div>
             </div>
           </div>
         )}

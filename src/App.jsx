@@ -42,6 +42,10 @@ import PropertyDetailPage from "./pages/househunting/PropertyDetailPage";
 import TenantDashboardPage from "./pages/househunting/TenantDashboardPage";
 import MyRequestsPage from "./pages/househunting/MyRequestsPage";
 import RegisterPage from "./pages/househunting/RegisterPage";
+import TrackRequestPage from "./pages/househunting/TrackRequestPage";
+
+// Profile Page (all roles)
+import ProfilePage from "./pages/ProfilePage";
 
 // Role-aware wrapper for shared routes (payments/maintenance)
 // Renders the tenant or landlord page depending on the logged-in user's role.
@@ -66,6 +70,7 @@ export default function App() {
     // Public routes — no login required
     { path: '/houses', element: <ListingsPage /> },
     { path: '/houses/register', element: <RegisterPage /> },
+    { path: '/houses/track-request', element: <TrackRequestPage /> },
     { path: '/houses/:id', element: <PropertyDetailPage /> },
 
 // Protected routes — tenant must be logged in.
@@ -105,6 +110,8 @@ export default function App() {
         { path: 'register-tenant', element: <ProtectedRoute allowedRoles={['landlord']}><RegisterTenantPage /></ProtectedRoute> },
         { path: 'payments', element: <ProtectedRoute allowedRoles={['landlord', 'tenant']}><RoleSwitch role="payments" /></ProtectedRoute> },
         { path: 'maintenance', element: <ProtectedRoute allowedRoles={['landlord', 'tenant']}><RoleSwitch role="maintenance" /></ProtectedRoute> },
+        // Shared Profile Page — all roles (landlord / admin / tenant)
+        { path: 'profile', element: <ProtectedRoute allowedRoles={['landlord', 'admin', 'tenant']} allowUnregisteredTenant><ProfilePage /></ProtectedRoute> },
 
         // Tenant Only Routes (Main Portal)
         { path: 'my-property', element: <ProtectedRoute allowedRoles={['tenant']}><MyPropertyPage /></ProtectedRoute> },
