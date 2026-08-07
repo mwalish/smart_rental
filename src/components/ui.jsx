@@ -1,5 +1,6 @@
 // Shared UI primitives for dashboard pages
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import api from '../services/api'
 
 export const PageHeader = ({ title, subtitle, action }) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -234,3 +235,131 @@ export const ModalActions = ({ onCancel, submitLabel, submitting }) => (
     </button>
   </div>
 )
+
+// ==================================================
+// Receipt Modal — fetches & displays a printable receipt
+// ==================================================
+const ReceiptRow = ({ label, value }) => (
+  <div className="flex items-start justify-between gap-4 py-2 border-b border-dashed border-gray-200 last:border-0">
+    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</span>
+    <span className="text-sm font-bold text-gray-900 text-right">{value || '—'}</span>
+  </div>
+)
+
+export const ReceiptModal = ({ paymentId, onClose }) => {
+  const [receipt, setReceipt] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await api.get(`core/payments/${paymentId}/receipt/`)
+        setReceipt(res.data.receipt)
+      } catch (e) {
+        setError(e.response?.data?.error || 'Failed to load receipt')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [paymentId])
+
+const handlePrint = () => {
+    const printContents = document.getElementById('printable-receipt')?.innerHTML
+    if (!printContents) return
+
+    // Open a hidden print window so we don't disturb the current page
+    // (no body-swap, no full-page reload).
+    const win = window.open('', '_blank', 'width=700,height=800')
+    if (!win) {
+      // Popup blocked — fall back to printing the modal content directly.
+      const original = document.body.innerHTML
+      document.body.innerHTML = `<html><head><title>Receipt ${receipt?.receipt_number || ''}</title></head><body>${printContents}</body></html>`
+      window.print()
+      document.body.innerHTML = original
+      window.location.reload()
+      return
+    }
+
+    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map((el) => el.outerHTML)
+      .join('')
+
+    win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Receipt ${receipt?.receipt_number || ''}</title>
+  ${styles}
+  <style>
+    html, body { margin: 0; padding: 0; background: #fff; }
+    body { display: flex; justify-content: center; padding: 24px; }
+    #printable-receipt { width: 100%; max-width: 560px; }
+    @media print {
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  ${printContents}
+  <script>window.onload = function () { window.print(); window.close(); }<\/script>
+</body>
+</html>`)
+    win.document.close()
+  }
+
+  return (
+    <Modal title="Payment Receipt" onClose={onClose} maxWidth="max-w-lg">
+      {loading ? <LoadingSpinner /> : error ? (
+        <div className="text-center py-8 text-red-500">
+          <i className="bi bi-exclamation-triangle-fill text-4xl block mb-3 opacity-60"></i>
+          <p className="text-sm">{error}</p>
+        </div>
+      ) : (
+        <div>
+          {/* Printable block */}
+          <div id="printable-receipt" className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-5">
+            <div className="bg-gradient-to-br from-teal-500 to-emerald-500 px-6 py-5 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-lg font-black">Smart Rental System</p>
+                  <p className="text-xs opacity-80 mt-0.5">Official Rent Payment Receipt</p>
+                </div>
+                <i className="bi bi-receipt text-3xl opacity-80"></i>
+              </div>
+            </div>
+            <div className="px-6 py-4">
+              {/* Receipt number banner */}
+              <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-3">
+                <span className="text-xs font-semibold text-gray-500 uppercase">Receipt No.</span>
+                <span className="text-sm font-black text-teal-700 tracking-wide">{receipt.receipt_number}</span>
+              </div>
+<ReceiptRow label="Issued On" value={receipt.issued_at ? new Date(receipt.issued_at).toLocaleString() : '—'} />
+              <ReceiptRow label="Issued By" value={receipt.issued_by} />
+              <ReceiptRow label="Received From" value={receipt.tenant} />
+              <ReceiptRow label="Property" value={receipt.property} />
+              <ReceiptRow label="Amount Paid" value={`KSh ${Number(receipt.amount_paid).toLocaleString()}`} />
+              <ReceiptRow label="Payment Method" value={receipt.method} />
+              {receipt.mpesa_ref && <ReceiptRow label="M-Pesa Ref" value={receipt.mpesa_ref} />}
+              <ReceiptRow label="Covers Months" value={Array.isArray(receipt.covers_months) && receipt.covers_months.length ? receipt.covers_months.join(', ') : '—'} />
+              <ReceiptRow label="Balance After" value={`KSh ${Number(receipt.balance_after).toLocaleString()}`} />
+              <div className="mt-4 pt-4 border-t border-gray-200 text-center">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest">Thank you for your payment</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col-reverse sm:flex-row gap-3">
+            <button type="button" onClick={onClose} className="w-full sm:flex-1 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+              Close
+            </button>
+            <button type="button" onClick={handlePrint} className="w-full sm:flex-1 py-2.5 text-sm font-semibold btn-primary flex items-center justify-center gap-2">
+              <i className="bi bi-printer"></i> Print Receipt
+            </button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  )
+}

@@ -37,6 +37,25 @@ export default function LeasesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    // Client-side date validation (mirrors backend LeaseSerializer rules).
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const start = new Date(form.start_date + 'T00:00:00')
+    const end = new Date(form.end_date + 'T00:00:00')
+
+    if (!form.start_date || !form.end_date) {
+      alert('Please select both a start date and an end date.')
+      return
+    }
+    if (!editing && start < today) {
+      alert('Start date cannot be in the past.')
+      return
+    }
+    if (end <= start) {
+      alert('End date must be later than the start date.')
+      return
+    }
+
     setSaving(true)
     setNotice('')
     // Only send fields the backend Lease model accepts
@@ -147,8 +166,24 @@ export default function LeasesPage() {
               )}
             </FormField>
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="Start Date"><Input type="date" value={form.start_date} onChange={set('start_date')} required /></FormField>
-              <FormField label="End Date"><Input type="date" value={form.end_date} onChange={set('end_date')} required /></FormField>
+              <FormField label="Start Date">
+                <Input
+                  type="date"
+                  value={form.start_date}
+                  onChange={set('start_date')}
+                  min={!editing ? new Date().toISOString().split('T')[0] : undefined}
+                  required
+                />
+              </FormField>
+              <FormField label="End Date">
+                <Input
+                  type="date"
+                  value={form.end_date}
+                  onChange={set('end_date')}
+                  min={form.start_date || undefined}
+                  required
+                />
+              </FormField>
             </div>
             <FormField label="Monthly Rent (KSh)"><Input type="number" value={form.monthly_rent} onChange={set('monthly_rent')} required /></FormField>
             <FormField label="Status">

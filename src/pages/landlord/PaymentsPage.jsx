@@ -1,19 +1,25 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import api from '../../services/api'
-import { PageHeader, PrimaryBtn, SearchBar, FilterTabs, Badge, EmptyState, LoadingSpinner, Modal, FormField, Input, Select, ModalActions, Table, Tr, Td, ActionBtn } from '../../components/ui'
+import { AuthContext } from '../../AuthContext'
+import { PageHeader, PrimaryBtn, SearchBar, FilterTabs, Badge, EmptyState, LoadingSpinner, Modal, FormField, Input, Select, ModalActions, Table, Tr, Td, ActionBtn, ReceiptModal } from '../../components/ui'
 
 const FILTERS = [{ key: 'ALL', label: 'All' }, { key: 'PENDING', label: 'Pending' }, { key: 'COMPLETED', label: 'Completed' }, { key: 'FAILED', label: 'Failed' }]
 const EMPTY = { lease: '', amount: '', method: 'M-Pesa', status: 'PENDING' }
 
 export default function PaymentsPage() {
+  const { profile } = useContext(AuthContext)
   const [payments, setPayments] = useState([])
   const [leases, setLeases] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(EMPTY)
-  const [filter, setFilter] = useState('ALL')
+const [filter, setFilter] = useState('ALL')
   const [search, setSearch] = useState('')
+  const [receiptId, setReceiptId] = useState(null)
+  const [verifyTarget, setVerifyTarget] = useState(null) // { id, status }
+  const [issuerName, setIssuerName] = useState('')
+  const [verifying, setVerifying] = useState(false)
 
   const load = async () => {
     try {
@@ -43,10 +49,37 @@ export default function PaymentsPage() {
     } catch (err) { alert(err.response?.data?.error || 'Failed to save') }
   }
 
-  const handleDelete = async (id) => {
+const handleDelete = async (id) => {
     if (!window.confirm('Delete this payment?')) return
     try { await api.delete(`landlord/payments/${id}/`); load() }
     catch { alert('Failed to delete') }
+  }
+
+  const submitVerify = async () => {
+    if (!verifyTarget) return
+    setVerifying(true)
+    try {
+      // Update status + issuer name so the printed receipt shows WHO verified it.
+      await api.put(`landlord/payments/${verifyTarget.id}/`, {
+        status: verifyTarget.status,
+        issued_by: issuerName.trim() || undefined,
+      })
+      setVerifyTarget(null)
+      setIssuerName('')
+      load()
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to verify payment')
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const handleVerify = (id, status) => {
+    // Prefill the issuer with the LANDLORD's name so the receipt defaults to
+    // the landlord as the official issuer (can still be changed if needed).
+    const landlordName = (profile?.business_name || profile?.full_name || '').trim()
+    setVerifyTarget({ id, status })
+    setIssuerName(landlordName)
   }
 
   const set = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
@@ -77,7 +110,7 @@ export default function PaymentsPage() {
       {loading ? <LoadingSpinner /> : filtered.length === 0 ? (
         <EmptyState icon="bi-cash-stack" message="No payments found." />
       ) : (
-        <Table headers={['Tenant / Property', 'Amount', 'Date', 'Method', 'Status', 'Actions']}>
+<Table headers={['Tenant / Property', 'Amount', 'Date', 'Method', 'Receipt No.', 'Covers', 'Status', 'Actions']}>
           {filtered.map(pay => (
             <Tr key={pay.id}>
               <Td>
@@ -92,10 +125,23 @@ export default function PaymentsPage() {
                   {pay.method || '—'}
                 </span>
               </Td>
+              <Td className="text-xs font-mono text-teal-700">{pay.receipt_number || '—'}</Td>
+              <Td className="text-xs text-gray-600">{Array.isArray(pay.covered_months) && pay.covered_months.length > 0 ? pay.covered_months.join(', ') : '—'}</Td>
               <Td><Badge status={pay.status} /></Td>
               <Td>
                 <div className="flex gap-1.5">
-                  <ActionBtn variant="blue" onClick={() => openForm(pay)}>Edit</ActionBtn>
+{pay.status === 'COMPLETED' && (
+                    <ActionBtn variant="blue" onClick={() => setReceiptId(pay.id)}>
+                      <i className="bi bi-receipt mr-1"></i>Receipt
+                    </ActionBtn>
+                  )}
+                  {pay.status === 'PENDING' && (
+                    <>
+                      <ActionBtn variant="green" onClick={() => handleVerify(pay.id, 'COMPLETED')}>Verify</ActionBtn>
+                      <ActionBtn variant="red" onClick={() => handleVerify(pay.id, 'FAILED')}>Fail</ActionBtn>
+                    </>
+                  )}
+                  <ActionBtn variant="default" onClick={() => openForm(pay)}>Edit</ActionBtn>
                   <ActionBtn variant="red" onClick={() => handleDelete(pay.id)}>Delete</ActionBtn>
                 </div>
               </Td>
@@ -127,6 +173,36 @@ export default function PaymentsPage() {
               </Select>
             </FormField>
             <ModalActions onCancel={() => setShowModal(false)} submitLabel={editing ? 'Update' : 'Save Payment'} />
+          </form>
+        </Modal>
+      )}
+
+{receiptId && <ReceiptModal paymentId={receiptId} onClose={() => setReceiptId(null)} />}
+
+      {verifyTarget && (
+        <Modal title={verifyTarget.status === 'COMPLETED' ? 'Verify Payment' : 'Mark Payment Failed'} onClose={() => setVerifyTarget(null)}>
+          <form onSubmit={(e) => { e.preventDefault(); submitVerify() }} className="space-y-4">
+            <p className="text-sm text-gray-600">
+              {verifyTarget.status === 'COMPLETED'
+                ? 'Enter the name of the person who received/verified this payment. This will appear on the official receipt as "Issued By".'
+                : 'Optionally enter your name for the record.'}
+            </p>
+            <FormField label="Issuer Name">
+              <Input
+                autoFocus
+                value={issuerName}
+                onChange={(e) => setIssuerName(e.target.value)}
+                placeholder="e.g. John Doe, Mary, Property Manager"
+              />
+            </FormField>
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-1">
+              <button type="button" onClick={() => setVerifyTarget(null)} className="w-full sm:flex-1 py-2.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" disabled={verifying} className="w-full sm:flex-1 py-2.5 text-sm btn-primary disabled:opacity-50">
+                {verifying ? 'Saving...' : verifyTarget.status === 'COMPLETED' ? 'Verify Payment' : 'Confirm Failed'}
+              </button>
+            </div>
           </form>
         </Modal>
       )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import api from '../../services/api'
 import { AuthContext } from '../../AuthContext'
-import { PageHeader, FilterTabs, Badge, EmptyState, LoadingSpinner, Table, Tr, Td, FormField, Input, Select, ModalActions } from '../../components/ui'
+import { PageHeader, FilterTabs, Badge, EmptyState, LoadingSpinner, Table, Tr, Td, FormField, Input, Select, ModalActions, ReceiptModal, ActionBtn } from '../../components/ui'
 
 const FILTERS = [{ key: 'ALL', label: 'All' }, { key: 'PENDING', label: 'Pending' }, { key: 'COMPLETED', label: 'Completed' }, { key: 'FAILED', label: 'Failed' }]
 const EMPTY = { lease: '', amount: '', method: 'M-Pesa' }
@@ -16,6 +16,7 @@ export default function TenantPaymentsPage() {
   const [form, setForm] = useState(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [filter, setFilter] = useState('ALL')
+  const [receiptId, setReceiptId] = useState(null)
 
   const load = async () => {
     try {
@@ -113,14 +114,14 @@ export default function TenantPaymentsPage() {
       )}
 
       {/* Filter + Table */}
-      <div className="flex flex-wrap gap-2 mb-1">
+<div className="flex flex-wrap gap-2 mb-1">
         <FilterTabs options={FILTERS} active={filter} onChange={setFilter} />
       </div>
 
       {loading ? <LoadingSpinner /> : filtered.length === 0 ? (
         <EmptyState icon="bi-credit-card" message="No payments found." />
       ) : (
-        <Table headers={['Property', 'Amount', 'Date', 'Method', 'Status', 'Covers']}>
+        <Table headers={['Property', 'Amount', 'Date', 'Method', 'Receipt No.', 'Status', 'Covers', 'Actions']}>
           {filtered.map(p => (
             <Tr key={p.id}>
               <Td className="font-semibold text-gray-900">{p.property_title || '—'}</Td>
@@ -132,12 +133,22 @@ export default function TenantPaymentsPage() {
                   {p.method || '—'}
                 </span>
               </Td>
+              <Td className="text-xs font-mono text-teal-700">{p.receipt_number || '—'}</Td>
               <Td><Badge status={p.status} /></Td>
               <Td className="text-xs text-gray-400">{Array.isArray(p.covered_months) && p.covered_months.length > 0 ? p.covered_months.join(', ') : '—'}</Td>
+              <Td>
+                {p.status === 'COMPLETED' && (
+                  <ActionBtn variant="blue" onClick={() => setReceiptId(p.id)}>
+                    <i className="bi bi-receipt mr-1"></i>Receipt
+                  </ActionBtn>
+                )}
+              </Td>
             </Tr>
           ))}
         </Table>
       )}
+
+      {receiptId && <ReceiptModal paymentId={receiptId} onClose={() => setReceiptId(null)} />}
     </div>
   )
 }
