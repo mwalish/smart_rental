@@ -2,18 +2,8 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthContext } from '../AuthContext'
 import { getProfile, updateProfile, changePassword } from '../services/authService'
+import { toAbsoluteMedia } from '../config'
 import { PageHeader } from '../components/ui'
-
-// Backend host used to build absolute media URLs
-const MEDIA_BASE = 'http://127.0.0.1:8000'
-
-// Turn a relative media path (e.g. /media/profiles/x.jpg or /profiles/x.jpg)
-// into a full URL the browser can load.
-const toAbsolute = (p) => {
-  if (!p) return ''
-  if (p.startsWith('http')) return p
-  return `${MEDIA_BASE}${p.startsWith('/') ? '' : '/'}${p}`
-}
 
 export default function ProfilePage() {
   const { user, profile, setProfile, Logout } = useContext(AuthContext)
@@ -182,7 +172,7 @@ export default function ProfilePage() {
           <div className="relative shrink-0">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center shadow-lg border-4 border-white">
               {currentPic ? (
-                <img src={toAbsolute(currentPic)} alt="Profile" className="w-full h-full object-cover" />
+<img src={toAbsoluteMedia(currentPic)} alt="Profile" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-4xl font-black text-white">{displayName.charAt(0).toUpperCase()}</span>
               )}

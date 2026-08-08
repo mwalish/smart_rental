@@ -266,19 +266,35 @@ export const ReceiptModal = ({ paymentId, onClose }) => {
   }, [paymentId])
 
 const handlePrint = () => {
-    const printContents = document.getElementById('printable-receipt')?.innerHTML
-    if (!printContents) return
+    const printEl = document.getElementById('printable-receipt')
+    if (!printEl?.innerHTML) return
 
-    // Open a hidden print window so we don't disturb the current page
-    // (no body-swap, no full-page reload).
-    const win = window.open('', '_blank', 'width=700,height=800')
-    if (!win) {
-      // Popup blocked — fall back to printing the modal content directly.
-      const original = document.body.innerHTML
-      document.body.innerHTML = `<html><head><title>Receipt ${receipt?.receipt_number || ''}</title></head><body>${printContents}</body></html>`
-      window.print()
-      document.body.innerHTML = original
-      window.location.reload()
+    const printContents = printEl.innerHTML
+    // Sanitize: strip any <script> tags from the receipt content to prevent XSS
+    // via injected HTML in receipt data (e.g. property name, tenant name).
+    const sanitized = printContents.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+
+    const doc = window.open('', '_blank', 'width=700,height=800')
+    if (!doc) {
+      // Popup blocked — print directly without full-page reload.
+      const iframe = document.createElement('iframe')
+      iframe.style.position = 'fixed'
+      iframe.style.top = '-9999px'
+      iframe.style.left = '-9999px'
+      iframe.style.width = '0'
+      iframe.style.height = '0'
+      document.body.appendChild(iframe)
+      const iframeDoc = iframe.contentWindow?.document
+      if (iframeDoc) {
+        iframeDoc.open()
+        iframeDoc.write(`<!DOCTYPE html><html><head><title>Receipt</title></head><body>${sanitized}</body></html>`)
+        iframeDoc.close()
+        // Print after a short delay to let content render
+        setTimeout(() => {
+          iframe.contentWindow?.print()
+          document.body.removeChild(iframe)
+        }, 300)
+      }
       return
     }
 
@@ -286,10 +302,12 @@ const handlePrint = () => {
       .map((el) => el.outerHTML)
       .join('')
 
-    win.document.write(`<!DOCTYPE html>
+    doc.open()
+    doc.write(`<!DOCTYPE html>
 <html>
 <head>
-  <title>Receipt ${receipt?.receipt_number || ''}</title>
+  <meta charset="utf-8">
+  <title>Receipt</title>
   ${styles}
   <style>
     html, body { margin: 0; padding: 0; background: #fff; }
@@ -301,11 +319,11 @@ const handlePrint = () => {
   </style>
 </head>
 <body>
-  ${printContents}
-  <script>window.onload = function () { window.print(); window.close(); }<\/script>
+  ${sanitized}
 </body>
 </html>`)
-    win.document.close()
+    doc.close()
+    doc.onload = function () { doc.print(); doc.close(); }
   }
 
   return (

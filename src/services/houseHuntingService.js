@@ -11,11 +11,10 @@ export const getAvailableProperties = async (params = {}) => {
   return res.data
 }
 
-/** Get single property detail by ID — no single-item endpoint, find from list */
+/** Get single property detail by ID — uses the dedicated public detail endpoint */
 export const getPropertyDetail = async (id) => {
-  const res = await api.get('core/house-hunting/properties/')
-  const list = Array.isArray(res.data) ? res.data : []
-  return list.find(p => String(p.id) === String(id)) || null
+  const res = await api.get(`core/properties/${id}/`)
+  return res.data
 }
 
 /** Submit a rental request (tenant must be logged in) */

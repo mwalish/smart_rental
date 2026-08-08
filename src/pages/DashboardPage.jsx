@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { AuthContext } from '../AuthContext'
 import api from '../services/api'
+import { toAbsoluteMedia } from '../config'
 import AdminOverviewPage from './admin/AdminOverviewPage'
 import { Badge } from '../components/ui'
 
@@ -115,17 +116,11 @@ export default function DashboardPage() {
 const navLinks = user?.role === 'admin' ? ADMIN_NAV : user?.role === 'landlord' ? LANDLORD_NAV : TENANT_NAV
   const displayName = profile?.full_name || user?.name || user?.username || 'User'
 
-  // Profile picture helper — renders either the uploaded image or a name initial.
-  const MEDIA_BASE = 'http://127.0.0.1:8000'
+// Profile picture helper — renders either the uploaded image or a name initial.
   const picSrc = profile?.profile_picture || null
-  const toAbsolute = (p) => {
-    if (!p) return ''
-    if (p.startsWith('http')) return p
-    return `${MEDIA_BASE}${p.startsWith('/') ? '' : '/'}${p}`
-  }
   const Avatar = ({ className = 'w-9 h-9 text-sm', textClass = 'text-sm' }) => picSrc ? (
     <img
-      src={toAbsolute(picSrc)}
+      src={toAbsoluteMedia(picSrc)}
       alt={displayName}
       className={`${className} rounded-full object-cover shrink-0`}
     />

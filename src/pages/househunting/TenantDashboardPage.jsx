@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { AuthContext } from '../../AuthContext'
+import { toAbsoluteMedia } from '../../config'
 import { getMyRequests } from '../../services/houseHuntingService'
 import { LoadingSpinner } from '../../components/ui'
 
@@ -28,13 +29,7 @@ export default function TenantDashboardPage() {
 
 const displayName = profile?.full_name || user?.name || user?.username || 'Tenant'
   // Profile picture helper — renders the uploaded image or a name initial.
-  const MEDIA_BASE = 'http://127.0.0.1:8000'
   const picSrc = profile?.profile_picture || null
-  const toAbsolute = (p) => {
-    if (!p) return ''
-    if (p.startsWith('http')) return p
-    return `${MEDIA_BASE}${p.startsWith('/') ? '' : '/'}${p}`
-  }
   const isOverview = location.pathname === '/houses/dashboard'
 
   const isActive = (link) => {
@@ -80,7 +75,7 @@ const displayName = profile?.full_name || user?.name || user?.username || 'Tenan
                 <p className="text-xs text-gray-400">Tenant</p>
               </div>
 {picSrc ? (
-                <img src={toAbsolute(picSrc)} alt={displayName} className="w-9 h-9 rounded-full object-cover shadow" />
+                <img src={toAbsoluteMedia(picSrc)} alt={displayName} className="w-9 h-9 rounded-full object-cover shadow" />
               ) : (
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center font-bold text-white text-sm shadow">
                   {displayName[0].toUpperCase()}

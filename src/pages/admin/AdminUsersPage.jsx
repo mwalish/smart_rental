@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import api from '../../services/api'
+import { toAbsoluteMedia } from '../../config'
 import { PageHeader, SearchBar, Badge, EmptyState, LoadingSpinner, Table, Tr, Td, FilterTabs } from '../../components/ui'
 
 const TABS = [
@@ -48,7 +49,7 @@ export default function AdminUsersPage() {
               <Td>
                 <div className="flex items-center gap-3">
                   {u.profile_picture ? (
-                    <img src={u.profile_picture.startsWith('http') ? u.profile_picture : `http://127.0.0.1:8000${u.profile_picture.startsWith('/') ? '' : '/'}${u.profile_picture}`} alt={u.full_name || u.username} className="w-8 h-8 rounded-full object-cover shrink-0" />
+<img src={toAbsoluteMedia(u.profile_picture)} alt={u.full_name || u.username} className="w-8 h-8 rounded-full object-cover shrink-0" />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-cyan-300 flex items-center justify-center font-bold text-white text-xs shrink-0">
                       {(u.full_name || u.username || '?').charAt(0).toUpperCase()}
