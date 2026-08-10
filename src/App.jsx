@@ -3,6 +3,7 @@ import { useRoutes } from "react-router-dom";
 import { AuthContext } from "./AuthContext";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import NotFound from "./pages/NotFound";
 import NotAuthorized from "./pages/NotAuthorized";
 import ProtectedRoute from "./ProtectedRoute";
@@ -61,6 +62,7 @@ export default function App() {
   const routes = useRoutes([
     { path: '/', element: <LandingPage /> },
     { path: '/login', element: <LoginPage /> },
+    { path: '/forgot-password', element: <ForgotPasswordPage /> },
     { path: '/not-authorized', element: <NotAuthorized /> },
 
     // =====================

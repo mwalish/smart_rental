@@ -42,3 +42,26 @@ Phase 1: Bug Fixes & Unused Code Cleanup (current)
 - [x] 25. Verified `manage.py check --database default` passes (DB connectivity confirmed)
 - [x] 26. Final `vite build` passes clean
 
+## Forgot Password (Phone OTP) — Frontend
+- [x] 1. Add `sendResetCode(phone)` + `confirmPasswordReset(phone, code, new_password)` to `src/services/authService.js`
+- [x] 2. Create `src/pages/ForgotPasswordPage.jsx` (3-step wizard: phone → OTP → new password) with resend countdown
+- [x] 3. Add `/forgot-password` route to `src/App.jsx`
+- [x] 4. Wire the "Forgot password?" link on `LoginPage.jsx` to `/forgot-password`
+- [x] 5. Verify `vite build` passes
+- [x] 6. Mark reset endpoints as public routes in `src/services/api.js` interceptor
+
+## Forgot Password — Email OTP Alternative (zero credentials)
+- [x] 7. Backend `send_reset_code` now accepts `email` OR `phone`, sends OTP via Django email (console backend in dev) or SMS
+- [x] 8. Backend `confirm_password_reset` now accepts `email` OR `phone` to look up the user
+- [x] 9. Backend `settings.py` — added EMAIL_* env config (console default, SMTP ready)
+- [x] 10. Frontend `authService.js` — added `sendEmailResetCode(email)`
+- [x] 11. Frontend `ForgotPasswordPage.jsx` — added Email/SMS method toggle, email input, dynamic "sent to" display
+- [x] 12. Verified `vite build` passes + backend Python syntax OK
+
+## Forgot Password — Production Email (Gmail SMTP)
+- [x] 13. Added Gmail SMTP credentials to backend `.env` (EMAIL_BACKEND=smtp, host smtp.gmail.com:587, TLS, smartrentals343@gmail.com)
+- [x] 14. Updated `.env.example` with documented email variables (placeholders, no real secret)
+- [x] 15. Confirmed `.env` is git-ignored (credentials safe from commits)
+- [x] 16. Verified settings.py already reads all EMAIL_* vars from env (django-environ)
+- [~] 17. NOTE: `manage.py check` can't run in this shell (missing `django-environ` in system Python) — run inside the project's virtualenv
+

@@ -15,7 +15,9 @@ api.interceptors.request.use(
     const isPublicRoute = 
       config.url.includes("login") || 
       // config.url.includes("refresh/") || 
-      config.url.includes("register/");
+      config.url.includes("register/") ||
+      config.url.includes("password/send-reset-code") ||
+      config.url.includes("password/confirm-reset");
 
     if (token && !isPublicRoute) {
       config.headers.Authorization = `Bearer ${token}`;
