@@ -27,14 +27,15 @@ export default function AdminOverviewPage() {
 
   return (
     <div className="p-6 space-y-6 animate-fade-up">
-      <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 rounded-2xl p-6 relative overflow-hidden">
+      {/* <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 rounded-2xl p-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-2xl"></div>
-        <div className="relative">
-          <p className="text-teal-300 text-sm font-medium mb-1">System Overview</p>
-          <h2 className="text-2xl font-black text-white mb-1">Admin Dashboard 🛡️</h2>
+     
+      </div> */}
+         <div className="relative">
+          <p className="text-teal-500 text-xl font-medium mb-1">System Overview</p>
+          {/* <h2 className="text-2xl font-black text-white mb-1">Admin Dashboard 🛡️</h2> */}
           <p className="text-slate-400 text-sm">Full system visibility across all landlords, tenants, and properties.</p>
         </div>
-      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map(c => (

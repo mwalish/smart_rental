@@ -55,11 +55,10 @@ export const FilterTabs = ({ options, active, onChange }) => (
       <button
         key={o.key}
         onClick={() => onChange(o.key)}
-        className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
-          active === o.key
+        className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${active === o.key
             ? 'bg-slate-900 text-white shadow-sm'
             : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-300 hover:text-gray-700'
-        }`}
+          }`}
       >
         {o.label}
       </button>
@@ -107,38 +106,74 @@ export const LoadingSpinner = () => (
     <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
   </div>
 )
-
-export const Modal = ({ title, onClose, children, maxWidth = 'max-w-md' }) => {
-  // Close on Escape key
+export const Modal = ({ title, onClose, children, maxWidth = 'max-w-lg' }) => {
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose?.() }
-    document.addEventListener('keydown', onKey)
-    // Prevent body scroll while modal is open
-    const prev = document.body.style.overflow
+    const handleEsc = (e) => e.key === 'Escape' && onClose?.()
+    document.addEventListener('keydown', handleEsc)
     document.body.style.overflow = 'hidden'
     return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
+      document.removeEventListener('keydown', handleEsc)
+      document.body.style.overflow = ''
     }
   }, [onClose])
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose?.()}
     >
-      <div className={`bg-white rounded-2xl shadow-2xl w-full ${maxWidth} max-h-[90vh] flex flex-col animate-fade-up`}>
-        <div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
-          <h3 className="text-base font-bold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
-            <i className="bi bi-x-lg text-sm"></i>
+      <div className={`w-full ${maxWidth} bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden`}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition"
+          >
+            <i className="bi bi-x-lg"></i>
           </button>
         </div>
-        <div className="p-5 overflow-y-auto">{children}</div>
+
+        {/* Content */}
+        <div className="overflow-y-auto px-6 py-5">
+          {children}
+        </div>
       </div>
     </div>
   )
 }
+
+// export const Modal = ({ title, onClose, children, maxWidth = 'max-w-md' }) => {
+//   // Close on Escape key
+//   useEffect(() => {
+//     const onKey = (e) => { if (e.key === 'Escape') onClose?.() }
+//     document.addEventListener('keydown', onKey)
+//     // Prevent body scroll while modal is open
+//     const prev = document.body.style.overflow
+//     document.body.style.overflow = 'hidden'
+//     return () => {
+//       document.removeEventListener('keydown', onKey)
+//       document.body.style.overflow = prev
+//     }
+//   }, [onClose])
+
+//   return (
+//     <div
+//       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
+//       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}
+//     >
+//       <div className={`bg-white rounded-2xl shadow-2xl w-full ${maxWidth} max-h-[90vh] flex flex-col animate-fade-up`}>
+//         <div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
+//           <h3 className="text-base font-bold text-gray-900">{title}</h3>
+//           <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
+//             <i className="bi bi-x-lg text-sm"></i>
+//           </button>
+//         </div>
+//         <div className="p-5 overflow-y-auto">{children}</div>
+//       </div>
+//     </div>
+//   )
+// }
 
 export const FormField = ({ label, children }) => (
   <div>
@@ -226,8 +261,8 @@ export const ModalActions = ({ onCancel, submitLabel, submitting }) => (
       {submitting ? (
         <span className="flex items-center justify-center gap-2">
           <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
           </svg>
           Saving...
         </span>
@@ -265,7 +300,7 @@ export const ReceiptModal = ({ paymentId, onClose }) => {
     load()
   }, [paymentId])
 
-const handlePrint = () => {
+  const handlePrint = () => {
     const printEl = document.getElementById('printable-receipt')
     if (!printEl?.innerHTML) return
 
@@ -352,7 +387,7 @@ const handlePrint = () => {
                 <span className="text-xs font-semibold text-gray-500 uppercase">Receipt No.</span>
                 <span className="text-sm font-black text-teal-700 tracking-wide">{receipt.receipt_number}</span>
               </div>
-<ReceiptRow label="Issued On" value={receipt.issued_at ? new Date(receipt.issued_at).toLocaleString() : '—'} />
+              <ReceiptRow label="Issued On" value={receipt.issued_at ? new Date(receipt.issued_at).toLocaleString() : '—'} />
               <ReceiptRow label="Issued By" value={receipt.issued_by} />
               <ReceiptRow label="Received From" value={receipt.tenant} />
               <ReceiptRow label="Property" value={receipt.property} />
