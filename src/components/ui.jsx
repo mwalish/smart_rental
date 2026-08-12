@@ -280,30 +280,6 @@ export const ReceiptModal = ({ paymentId, onClose }) => {
     // via injected HTML in receipt data (e.g. property name, tenant name).
     const sanitized = printContents.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
 
-    const doc = window.open('', '_blank', 'width=700,height=800')
-    if (!doc) {
-      // Popup blocked — print directly without full-page reload.
-      const iframe = document.createElement('iframe')
-      iframe.style.position = 'fixed'
-      iframe.style.top = '-9999px'
-      iframe.style.left = '-9999px'
-      iframe.style.width = '0'
-      iframe.style.height = '0'
-      document.body.appendChild(iframe)
-      const iframeDoc = iframe.contentWindow?.document
-      if (iframeDoc) {
-        iframeDoc.open()
-        iframeDoc.write(`<!DOCTYPE html><html><head><title>Receipt</title></head><body>${sanitized}</body></html>`)
-        iframeDoc.close()
-        // Print after a short delay to let content render
-        setTimeout(() => {
-          iframe.contentWindow?.print()
-          document.body.removeChild(iframe)
-        }, 300)
-      }
-      return
-    }
-
     const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
       .map((el) => el.outerHTML)
       .join('')
@@ -328,25 +304,47 @@ export const ReceiptModal = ({ paymentId, onClose }) => {
 </body>
 </html>`
 
-    // IMPORTANT: attach the onload handler BEFORE calling doc.close().
-    // doc.close() finishes loading the document synchronously, so if onload is
-    // assigned afterwards the event has already fired and print() never runs.
-    doc.onload = function () {
-      doc.print()
-      doc.close()
+    const doc = window.open('', '_blank', 'width=700,height=800')
+    if (!doc) {
+      // Popup blocked — print directly without full-page reload.
+      const iframe = document.createElement('iframe')
+      iframe.style.position = 'fixed'
+      iframe.style.top = '-9999px'
+      iframe.style.left = '-9999px'
+      iframe.style.width = '0'
+      iframe.style.height = '0'
+      document.body.appendChild(iframe)
+      const iframeDoc = iframe.contentWindow?.document
+      if (iframeDoc) {
+        iframeDoc.open()
+        iframeDoc.write(`<!DOCTYPE html><html><head><title>Receipt</title></head><body>${sanitized}</body></html>`)
+        iframeDoc.close()
+        // Print after a short delay to let content render
+        setTimeout(() => {
+          iframe.contentWindow?.print()
+          document.body.removeChild(iframe)
+        }, 300)
+      }
+      return
     }
 
-    doc.open()
-    doc.write(html)
-    doc.close()
+    // Write the receipt content into the new window.
+    doc.document.open()
+    doc.document.write(html)
+    doc.document.close()
 
-    // Safety net: if onload doesn't fire (some browsers), trigger print after a
-    // short delay once the content has rendered.
+    // Wait for the new document to fully render, then trigger the print dialog.
+    // Using a timeout (instead of an onload handler) is more reliable because
+    // the load event can fire before the content is written, which would print
+    // a blank page.
     setTimeout(() => {
       try {
-        if (!doc.closed) doc.print()
+        if (!doc.closed) {
+          doc.focus()
+          doc.print()
+        }
       } catch (e) { /* ignore */ }
-    }, 500)
+    }, 400)
   }
 
   return (

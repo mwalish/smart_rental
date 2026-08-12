@@ -54,21 +54,24 @@ export default function PropertiesPage() {
   const [uploadPreviews, setUploadPreviews] = useState([]) // previews for upload
   const [uploading, setUploading] = useState(false)
   const [uploadNotice, setUploadNotice] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  const load = async () => {
+  const load = async (fetchApplicants = true) => {
     try {
       const r = await api.get('landlord/properties/')
       const list = r.data || []
       setProperties(list)
-      // Fetch applicants for each property
-      const appMap = {}
-      await Promise.all(list.map(async (p) => {
-        try {
-          const ar = await api.get(`landlord/properties/${p.id}/applicants/`)
-          appMap[p.id] = ar.data.applicants || []
-        } catch (e) { appMap[p.id] = [] }
-      }))
-      setApplicants(appMap)
+      // Fetch applicants for each property (only on initial load to keep updates fast)
+      if (fetchApplicants) {
+        const appMap = {}
+        await Promise.all(list.map(async (p) => {
+          try {
+            const ar = await api.get(`landlord/properties/${p.id}/applicants/`)
+            appMap[p.id] = ar.data.applicants || []
+          } catch (e) { appMap[p.id] = [] }
+        }))
+        setApplicants(appMap)
+      }
     } catch (e) { console.error(e) } finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])
@@ -107,12 +110,16 @@ export default function PropertiesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setSaving(true)
     try {
       let savedId = editing?.id
-      // Include uploaded photos in the payload so they get saved to the backend JSONField
       const payload = { ...form }
-      if (photoPreviews.length > 0) {
-        payload.photos = photoPreviews
+      // Only send NEWLY uploaded photos in the payload. Existing photos are
+      // already stored on the backend — re-sending them as base64 makes the
+      // update request very slow (base64 images are large).
+      if (photos.length > 0) {
+        const existingPhotos = (editing?.photos && Array.isArray(editing.photos)) ? editing.photos : []
+        payload.photos = [...existingPhotos, ...photos]
       }
       if (editing) {
         await api.put(`landlord/properties/${editing.id}/`, payload)
@@ -124,10 +131,12 @@ export default function PropertiesPage() {
       if (photoPreviews.length > 0 && savedId) {
         saveStoredPhotos(savedId, photoPreviews)
       }
-      setShowModal(false); load()
+      setShowModal(false); load(false)
     } catch (err) {
       const d = err.response?.data
       alert(d?.error ? (typeof d.error === 'string' ? d.error : Object.entries(d.error).map(([k, v]) => `${k}: ${v}`).join(' | ')) : 'Failed to save')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -136,7 +145,7 @@ export default function PropertiesPage() {
     try {
       await api.delete(`landlord/properties/${id}/`)
       localStorage.removeItem(`prop_photos_${id}`)
-      load()
+      load(false)
     }
     catch { alert('Failed to delete') }
   }
@@ -363,9 +372,18 @@ export default function PropertiesPage() {
               </button>
               <button
                 type="submit"
-                className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700"
+                disabled={saving}
+                className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {editing ? 'Update Property' : 'Add Property'}
+                {saving ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Saving...
+                  </>
+                ) : (editing ? 'Update Property' : 'Add Property')}
               </button>
             </div>
           </form>
