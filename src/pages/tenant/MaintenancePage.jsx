@@ -9,12 +9,32 @@ const FILTERS = [
   { key: 'IN_PROGRESS', label: 'In Progress' },
   { key: 'COMPLETED', label: 'Completed' },
 ]
+
+// The backend core/maintenance/ endpoint requires a PROPERTY id (the Maintenance
+// model has a `property` FK), NOT a lease id. The lease serializer exposes the
+// property as a raw FK id in `lease.property`.
 const EMPTY = { property: '', issue: '', description: '' }
+
+// Extract the property id from a lease — the lease serializer returns the
+// property as a raw FK id (number), but may also be an object in some cases.
+const getPropertyId = (lease) => {
+  const p = lease?.property
+  if (!p) return ''
+  if (typeof p === 'object') return p.id || ''
+  return p
+}
+
+// Extract a display title for the property from a lease
+const getPropertyTitle = (lease) => {
+  const p = lease?.property
+  if (p && typeof p === 'object') return p.title || 'Property'
+  return 'Your property'
+}
 
 export default function MaintenancePage() {
   const { profile } = useContext(AuthContext)
   const [requests, setRequests] = useState([])
-  const [properties, setProperties] = useState([])
+  const [leaseOptions, setLeaseOptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(EMPTY)
@@ -26,9 +46,10 @@ export default function MaintenancePage() {
       try {
         const [mr, lr] = await Promise.all([api.get('core/maintenance/'), api.get('core/leases/')])
         setRequests(mr.data.maintenance_requests || [])
-        const props = (lr.data.leases || []).filter(l => l.status === 'ACTIVE' && l.property).map(l => l.property)
-        setProperties(props)
-        if (props.length === 1) setForm(p => ({ ...p, property: props[0].id }))
+        // Active leases that have a property id
+        const active = (lr.data.leases || []).filter(l => l.status === 'ACTIVE' && getPropertyId(l))
+        setLeaseOptions(active)
+        if (active.length === 1) setForm(p => ({ ...p, property: getPropertyId(active[0]) }))
       } catch (e) { console.error(e) } finally { setLoading(false) }
     }
     load()
@@ -38,10 +59,28 @@ export default function MaintenancePage() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const res = await api.post('core/maintenance/', form)
-      setRequests(prev => [res.data.maintenance, ...prev])
+      const res = await api.post('core/maintenance/', {
+        property: form.property,
+        issue: form.issue,
+        description: form.description || '',
+      })
+      setRequests(prev => [res.data.maintenance || res.data, ...prev])
       setForm(EMPTY); setShowForm(false)
-    } catch (err) { alert(err.response?.data?.error || 'Failed to submit') }
+    } catch (err) {
+      // Show the backend's actual validation message instead of a generic one
+      const d = err.response?.data
+      if (d && typeof d === 'object') {
+        const firstErr = Object.entries(d).find(([k, v]) => v && (typeof v === 'string' || Array.isArray(v)))
+        if (firstErr) {
+          const [k, v] = firstErr
+          alert(`${k}: ${Array.isArray(v) ? v[0] : v}`)
+        } else {
+          alert(d.error || d.detail || 'Failed to submit')
+        }
+      } else {
+        alert(d || 'Failed to submit')
+      }
+    }
     finally { setSubmitting(false) }
   }
 
@@ -69,13 +108,25 @@ export default function MaintenancePage() {
             <i className="bi bi-tools text-teal-500"></i> Submit a Maintenance Request
           </p>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {properties.length > 1 && (
+            {leaseOptions.length > 1 ? (
               <FormField label="Property">
                 <select value={form.property} onChange={set('property')} required className="input-field w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50">
                   <option value="">Select property...</option>
-                  {properties.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                  {leaseOptions.map(l => (
+                    <option key={l.id} value={getPropertyId(l)}>
+                      {getPropertyTitle(l)}
+                    </option>
+                  ))}
                 </select>
               </FormField>
+            ) : (
+              // Single active lease — show it as a read-only context line
+              leaseOptions.length === 1 && (
+                <div className="flex items-center gap-2 p-3 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-600">
+                  <i className="bi bi-building text-teal-500"></i>
+                  {getPropertyTitle(leaseOptions[0])}
+                </div>
+              )
             )}
             <FormField label="Issue"><Input value={form.issue} onChange={set('issue')} required placeholder="e.g. Broken pipe, No electricity..." /></FormField>
             <FormField label="Description (optional)"><Textarea rows={3} value={form.description} onChange={set('description')} placeholder="Describe the issue in more detail..." /></FormField>

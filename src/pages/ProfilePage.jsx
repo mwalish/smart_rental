@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthContext } from '../AuthContext'
 import { getProfile, updateProfile, changePassword } from '../services/authService'
@@ -7,15 +7,12 @@ import { PageHeader } from '../components/ui'
 
 export default function ProfilePage() {
   const { user, profile, setProfile, Logout } = useContext(AuthContext)
-  const fileInputRef = useRef(null)
   const navigate = useNavigate()
 
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
   const [message, setMessage] = useState(null) // { type: 'success'|'error', text }
-  const [preview, setPreview] = useState(null) // object URL while picking a new file
 
   // Change-password form state
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
@@ -40,50 +37,8 @@ export default function ProfilePage() {
 
   useEffect(() => { load() }, [])
 
-  // Current picture source: preview (newly selected) > profile.data > profile(login)
-  const currentPic = preview || profile?.profile_picture || (data && data.profile_picture) || ''
-
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    // Validate image type
-    if (!file.type.startsWith('image/')) {
-      setMessage({ type: 'error', text: 'Please choose an image file (JPG, PNG, etc).' })
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage({ type: 'error', text: 'Image too large — max 5MB.' })
-      return
-    }
-    setMessage(null)
-    setPreview(URL.createObjectURL(file))
-    // Auto-upload on selection
-    uploadFile(file)
-  }
-
-  const uploadFile = async (file) => {
-    setUploading(true)
-    try {
-      const fd = new FormData()
-      fd.append('profile_picture', file)
-      const res = await updateProfile(fd)
-      // Backend returns { message, profile } — update local profile store
-      const updated = res?.profile || res
-      if (updated) {
-        setProfile({ ...profile, ...updated })
-        setData(updated)
-      }
-      setMessage({ type: 'success', text: 'Profile picture updated!' })
-      // Refresh the page so the new picture is reflected across the whole app
-      // (sidebar, header, mobile avatars) immediately.
-      setTimeout(() => window.location.reload(), 600)
-    } catch (err) {
-      setMessage({ type: 'error', text: err?.response?.data?.error || 'Failed to upload picture. Try again.' })
-    } finally {
-      setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
+  // Current picture source: profile.data > profile(login)
+  const currentPic = profile?.profile_picture || (data && data.profile_picture) || ''
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -165,35 +120,22 @@ export default function ProfilePage() {
     <div className="p-4 sm:p-6 space-y-6 animate-fade-up">
       <PageHeader title="My Profile" subtitle="View and manage your account details" />
 
-      {/* ── Profile Picture card — picture at the top next to the name ── */}
+      {/* ── Profile card — avatar + name ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-          {/* Avatar */}
-          <div className="relative shrink-0">
+          {/* Avatar (display only — no change photo) */}
+          <div className="shrink-0">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-teal-500 to-cyan-400 flex items-center justify-center shadow-lg border-4 border-white">
               {currentPic ? (
-<img src={toAbsoluteMedia(currentPic)} alt="Profile" className="w-full h-full object-cover" />
+                <img
+                  src={toAbsoluteMedia(currentPic)}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <span className="text-4xl font-black text-white">{displayName.charAt(0).toUpperCase()}</span>
               )}
             </div>
-            {/* Upload button */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-teal-600 text-white flex items-center justify-center shadow-lg hover:bg-teal-700 transition-colors disabled:opacity-60"
-              title="Change photo"
-            >
-              <i className={`bi ${uploading ? 'bi-arrow-repeat animate-spin' : 'bi-camera-fill'}`}></i>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
           </div>
 
           {/* Name / role next to the picture (top) */}
@@ -201,15 +143,6 @@ export default function ProfilePage() {
             <h2 className="text-2xl font-black text-gray-900 truncate">{displayName}</h2>
             <p className="text-sm text-gray-500 capitalize mt-0.5">{role?.replace('_', ' ')}</p>
             <p className="text-sm text-gray-400 mt-1">{user?.email}</p>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-teal-600 hover:text-teal-700"
-            >
-              <i className="bi bi-cloud-arrow-up"></i>
-              {uploading ? 'Uploading...' : 'Change photo'}
-            </button>
           </div>
         </div>
 

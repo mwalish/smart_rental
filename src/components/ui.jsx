@@ -308,8 +308,7 @@ export const ReceiptModal = ({ paymentId, onClose }) => {
       .map((el) => el.outerHTML)
       .join('')
 
-    doc.open()
-    doc.write(`<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -327,9 +326,27 @@ export const ReceiptModal = ({ paymentId, onClose }) => {
 <body>
   ${sanitized}
 </body>
-</html>`)
+</html>`
+
+    // IMPORTANT: attach the onload handler BEFORE calling doc.close().
+    // doc.close() finishes loading the document synchronously, so if onload is
+    // assigned afterwards the event has already fired and print() never runs.
+    doc.onload = function () {
+      doc.print()
+      doc.close()
+    }
+
+    doc.open()
+    doc.write(html)
     doc.close()
-    doc.onload = function () { doc.print(); doc.close(); }
+
+    // Safety net: if onload doesn't fire (some browsers), trigger print after a
+    // short delay once the content has rendered.
+    setTimeout(() => {
+      try {
+        if (!doc.closed) doc.print()
+      } catch (e) { /* ignore */ }
+    }, 500)
   }
 
   return (
