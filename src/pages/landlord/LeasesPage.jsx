@@ -141,135 +141,44 @@ export default function LeasesPage() {
       )}
 
       {showModal && (
-  <Modal title={editing ? 'Edit Lease' : 'New Lease'} onClose={() => setShowModal(false)}>
-    <form onSubmit={handleSubmit} className="space-y-2">
-      
-      {/* Property */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Property</label>
-        <Select value={form.property} onChange={set('property')} required>
-          <option value="">Select property...</option>
-          {properties.map(p => (
-            <option key={p.id} value={p.id}>
-              {p.title} — {p.location}
-            </option>
-          ))}
-        </Select>
-      </div>
-
-      {/* Tenant */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mt-8 mb-1.5">Tenant</label>
-        <Select value={form.tenant} onChange={set('tenant')} required>
-          <option value="">Select tenant...</option>
-          {tenants.map(t => (
-            <option key={t.id} value={t.id}>
-              {t.full_name}{t.phone ? ` — ${t.phone}` : ''}
-            </option>
-          ))}
-        </Select>
-        {tenants.length === 0 && (
-          <p className="text-xs text-amber-600 mt-1.5">
-            No tenants registered yet. Please register a tenant first.
-          </p>
-        )}
-      </div>
-
-      {/* Dates */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date</label>
-          <Input
-            type="date"
-            value={form.start_date}
-            onChange={set('start_date')}
-            min={!editing ? new Date().toISOString().split('T')[0] : undefined}
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date</label>
-          <Input
-            type="date"
-            value={form.end_date}
-            onChange={set('end_date')}
-            min={form.start_date || undefined}
-            required
-          />
-        </div>
-      </div>
-
-      {/* Monthly Rent */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Monthly Rent (KSh)</label>
-        <Input
-          type="number"
-          value={form.monthly_rent}
-          onChange={set('monthly_rent')}
-          required
-          placeholder="0"
-        />
-      </div>
-
-      {/* Status */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
-        <Select value={form.status} onChange={set('status')}>
-          <option value="PENDING">Pending</option>
-          <option value="ACTIVE">Active</option>
-          <option value="EXPIRED">Expired</option>
-          <option value="TERMINATED">Terminated</option>
-        </Select>
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-3 pt-3">
-        <button
-          type="button"
-          onClick={() => setShowModal(false)}
-          className="flex-1 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex-1 py-2.5 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700 transition disabled:opacity-50"
-        >
-          {saving ? 'Saving...' : editing ? 'Update Lease' : 'Create Lease'}
-        </button>
-      </div>
-    </form>
-  </Modal>
-)}
-
-      {/* {showModal && (
         <Modal title={editing ? 'Edit Lease' : 'New Lease'} onClose={() => setShowModal(false)}>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <FormField label="Property">
+          <form onSubmit={handleSubmit} className="space-y-3">
+
+            {/* Property */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Property</label>
               <Select value={form.property} onChange={set('property')} required>
                 <option value="">Select property...</option>
-                {properties.map(p => <option key={p.id} value={p.id}>{p.title} — {p.location}</option>)}
+                {properties.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.title} — {p.location}
+                  </option>
+                ))}
               </Select>
-            </FormField>
-            <FormField label="Tenant">
+            </div>
+
+            {/* Tenant */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Tenant</label>
               <Select value={form.tenant} onChange={set('tenant')} required>
                 <option value="">Select tenant...</option>
                 {tenants.map(t => (
                   <option key={t.id} value={t.id}>
-                    {t.full_name}{t.phone ? ` — ${t.phone}` : ''}{t.email_address ? ` (${t.email_address})` : ''}
+                    {t.full_name}{t.phone ? ` — ${t.phone}` : ''}
                   </option>
                 ))}
               </Select>
               {tenants.length === 0 && (
-                <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
-                  <i className="bi bi-exclamation-circle-fill"></i>
-                  No tenants registered yet — add one under <span className="font-semibold">Tenants → Register Tenant</span> first.
+                <p className="text-xs text-amber-600 mt-1.5">
+                  No tenants registered yet. Please register a tenant first.
                 </p>
               )}
-            </FormField>
-            <div className="grid grid-cols-2 gap-3">
-              <FormField label="Start Date">
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Date</label>
                 <Input
                   type="date"
                   value={form.start_date}
@@ -277,8 +186,9 @@ export default function LeasesPage() {
                   min={!editing ? new Date().toISOString().split('T')[0] : undefined}
                   required
                 />
-              </FormField>
-              <FormField label="End Date">
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">End Date</label>
                 <Input
                   type="date"
                   value={form.end_date}
@@ -286,18 +196,52 @@ export default function LeasesPage() {
                   min={form.start_date || undefined}
                   required
                 />
-              </FormField>
+              </div>
             </div>
-            <FormField label="Monthly Rent (KSh)"><Input type="number" value={form.monthly_rent} onChange={set('monthly_rent')} required /></FormField>
-            <FormField label="Status">
+
+            {/* Monthly Rent */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Monthly Rent (KSh)</label>
+              <Input
+                type="number"
+                value={form.monthly_rent}
+                onChange={set('monthly_rent')}
+                required
+                placeholder="0"
+              />
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
               <Select value={form.status} onChange={set('status')}>
-                <option value="PENDING">Pending</option><option value="ACTIVE">Active</option><option value="EXPIRED">Expired</option><option value="TERMINATED">Terminated</option>
+                <option value="PENDING">Pending</option>
+                <option value="ACTIVE">Active</option>
+                <option value="EXPIRED">Expired</option>
+                <option value="TERMINATED">Terminated</option>
               </Select>
-            </FormField>
-            <ModalActions onCancel={() => setShowModal(false)} submitLabel={editing ? 'Update Lease' : 'Create Lease'} submitting={saving} />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="flex-1 py-2 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex-1 py-2 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700 transition disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : editing ? 'Update Lease' : 'Create Lease'}
+              </button>
+            </div>
           </form>
         </Modal>
-      )} */}
+      )}
     </div>
   )
 }

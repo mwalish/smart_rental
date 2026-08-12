@@ -1,5 +1,6 @@
 // Shared UI primitives for dashboard pages
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import api from '../services/api'
 
 export const PageHeader = ({ title, subtitle, action }) => (
@@ -106,6 +107,7 @@ export const LoadingSpinner = () => (
     <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
   </div>
 )
+
 export const Modal = ({ title, onClose, children, maxWidth = 'max-w-lg' }) => {
   useEffect(() => {
     const handleEsc = (e) => e.key === 'Escape' && onClose?.()
@@ -117,7 +119,7 @@ export const Modal = ({ title, onClose, children, maxWidth = 'max-w-lg' }) => {
     }
   }, [onClose])
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose?.()}
@@ -139,41 +141,10 @@ export const Modal = ({ title, onClose, children, maxWidth = 'max-w-lg' }) => {
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
-
-// export const Modal = ({ title, onClose, children, maxWidth = 'max-w-md' }) => {
-//   // Close on Escape key
-//   useEffect(() => {
-//     const onKey = (e) => { if (e.key === 'Escape') onClose?.() }
-//     document.addEventListener('keydown', onKey)
-//     // Prevent body scroll while modal is open
-//     const prev = document.body.style.overflow
-//     document.body.style.overflow = 'hidden'
-//     return () => {
-//       document.removeEventListener('keydown', onKey)
-//       document.body.style.overflow = prev
-//     }
-//   }, [onClose])
-
-//   return (
-//     <div
-//       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in"
-//       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.() }}
-//     >
-//       <div className={`bg-white rounded-2xl shadow-2xl w-full ${maxWidth} max-h-[90vh] flex flex-col animate-fade-up`}>
-//         <div className="flex items-center justify-between p-5 border-b border-gray-100 shrink-0">
-//           <h3 className="text-base font-bold text-gray-900">{title}</h3>
-//           <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
-//             <i className="bi bi-x-lg text-sm"></i>
-//           </button>
-//         </div>
-//         <div className="p-5 overflow-y-auto">{children}</div>
-//       </div>
-//     </div>
-//   )
-// }
 
 export const FormField = ({ label, children }) => (
   <div>
