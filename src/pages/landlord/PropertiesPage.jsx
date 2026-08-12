@@ -272,7 +272,7 @@ export default function PropertiesPage() {
           <form onSubmit={handleSubmit} className="space-y-2">
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mt-8 mb-1.5">Property Name</label>
+              <label className="block text-sm font-medium text-gray-700  mb-1.5">Property Name</label>
               <Input
                 value={form.title}
                 onChange={set('title')}
