@@ -11,3 +11,4 @@
 - [x] 5. Frontend `src/pages/landlord/PaymentsPage.jsx` — add verify-with-name flow.
 - [x] 6. Verify Python syntax + frontend build.
 
+okay now i wanted that a tenant can have muliple houeses with deiffrent landlords so lets  impliment that and also we dont want the landlord to create anothe account by just approving
