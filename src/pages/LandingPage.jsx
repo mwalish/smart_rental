@@ -381,7 +381,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-500 text-sm">
-            <p>© 2025 SmartRent. All rights reserved.</p>
+            <p>© 2026 SmartRent. All rights reserved.</p>
             <p>Made with <i className="bi bi-heart-fill text-red-500 mx-1"></i> in Kenya</p>
           </div>
         </div>
