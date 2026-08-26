@@ -9,6 +9,8 @@ export default function LeasesPage() {
   const [properties, setProperties] = useState([])
   const [tenants, setTenants] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [nextPage, setNextPage] = useState(null)
   const [saving, setSaving] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -17,17 +19,37 @@ export default function LeasesPage() {
 
   const load = async () => {
     try {
+      // landlord/leases/ is paginated (page_size=20) — used for the table
+      // below, so "Load more" fetches subsequent pages.
+      //
+      // landlord/properties/ and landlord/registered-tenants/ back the
+      // Property/Tenant <select> dropdowns in the Create Lease form, which
+      // need the landlord's FULL set to pick from — not just page 1. Rather
+      // than silently truncating those dropdowns to 20 options, we request
+      // a larger page explicitly (page_size=100, the server-side cap) via
+      // the page_size_query_param instead of fetching "all rows" unbounded.
       const [lr, pr, tr] = await Promise.all([
         api.get('landlord/leases/'),
-        api.get('landlord/properties/'),
-        api.get('landlord/registered-tenants/')
+        api.get('landlord/properties/', { params: { page_size: 100 } }),
+        api.get('landlord/registered-tenants/', { params: { page_size: 100 } })
       ])
-      setLeases(lr.data.leases || lr.data)
-      setProperties(pr.data)
-      setTenants(tr.data.tenants || tr.data || [])
+      setLeases(lr.data.leases || lr.data?.results || lr.data)
+      setNextPage(lr.data?.next || null)
+      setProperties(pr.data?.results || pr.data)
+      setTenants(tr.data.tenants || tr.data?.results || tr.data || [])
     } catch (e) { console.error(e) } finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])
+
+  const loadMore = async () => {
+    if (!nextPage || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const r = await api.get(nextPage)
+      setLeases(prev => [...prev, ...(r.data.leases || r.data?.results || r.data || [])])
+      setNextPage(r.data?.next || null)
+    } catch (e) { console.error(e) } finally { setLoadingMore(false) }
+  }
 
   const openForm = (l = null) => {
     setEditing(l)
@@ -138,6 +160,18 @@ export default function LeasesPage() {
             </Tr>
           ))}
         </Table>
+      )}
+
+      {nextPage && !loading && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+          >
+            {loadingMore ? 'Loading...' : 'Load more'}
+          </button>
+        </div>
       )}
 
       {showModal && (

@@ -42,6 +42,8 @@ const getAllPhotos = (p) => {
 export default function PropertiesPage() {
   const [properties, setProperties] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [nextPage, setNextPage] = useState(null) // full URL for next page, or null
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(EMPTY)
@@ -56,25 +58,62 @@ export default function PropertiesPage() {
   const [uploadNotice, setUploadNotice] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const load = async (fetchApplicants = true) => {
-    try {
-      const r = await api.get('landlord/properties/')
-      const list = r.data || []
-      setProperties(list)
-      // Fetch applicants for each property (only on initial load to keep updates fast)
-      if (fetchApplicants) {
-        const appMap = {}
-        await Promise.all(list.map(async (p) => {
-          try {
-            const ar = await api.get(`landlord/properties/${p.id}/applicants/`)
-            appMap[p.id] = ar.data.applicants || []
-          } catch (e) { appMap[p.id] = [] }
-        }))
-        setApplicants(appMap)
-      }
-    } catch (e) { console.error(e) } finally { setLoading(false) }
+  const fetchApplicantsFor = async (list) => {
+    const appMap = {}
+    await Promise.all(list.map(async (p) => {
+      try {
+        const ar = await api.get(`landlord/properties/${p.id}/applicants/`)
+        appMap[p.id] = ar.data.applicants || []
+      } catch (e) { appMap[p.id] = [] }
+    }))
+    setApplicants(prev => ({ ...prev, ...appMap }))
   }
-  useEffect(() => { load() }, [])
+
+  // NOTE: `landlord/properties/` is now paginated server-side (page_size=20).
+  // The response is DRF's standard shape: { results, count, next, previous }.
+  // `next` (when present) is a full URL for the next page — we store it as-is
+  // and pass it straight to api.get() for "Load more" rather than
+  // reconstructing query params ourselves.
+  //
+  // `signal` cancels the request if the component unmounts before it
+  // resolves (e.g. user navigates away quickly) so we never call setState
+  // on an unmounted component or race a stale response against a newer one.
+  const load = async (fetchApplicants = true, signal) => {
+    try {
+      const r = await api.get('landlord/properties/', { signal })
+      const list = r.data?.results || r.data || []
+      setProperties(list)
+      setNextPage(r.data?.next || null)
+      if (fetchApplicants) await fetchApplicantsFor(list)
+    } catch (e) {
+      if (e.name !== 'CanceledError' && e.code !== 'ERR_CANCELED') console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadMore = async () => {
+    if (!nextPage || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const r = await api.get(nextPage)
+      const list = r.data?.results || r.data || []
+      setProperties(prev => [...prev, ...list])
+      setNextPage(r.data?.next || null)
+      await fetchApplicantsFor(list)
+    } catch (e) { console.error(e) } finally { setLoadingMore(false) }
+  }
+
+  // Fetch once on mount. Empty dep array — deliberately does NOT include
+  // `properties` (or any fetched state) as a dependency, which is the
+  // classic cause of an infinite fetch loop (state update → effect reruns →
+  // fetch → state update → ...). AbortController cancels the in-flight
+  // request on unmount.
+  useEffect(() => {
+    const controller = new AbortController()
+    load(true, controller.signal)
+    return () => controller.abort()
+  }, [])
 
   const openForm = (p = null) => {
     setEditing(p)
@@ -264,6 +303,18 @@ export default function PropertiesPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {nextPage && !loading && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+          >
+            {loadingMore ? 'Loading...' : 'Load more'}
+          </button>
         </div>
       )}
 

@@ -5,15 +5,33 @@ import { PageHeader, SearchBar, Badge, EmptyState, LoadingSpinner, Modal, Table,
 export default function TenantsPage() {
   const [tenants, setTenants] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [nextPage, setNextPage] = useState(null)
   const [search, setSearch] = useState('')
   const [viewing, setViewing] = useState(null)
 
+  // landlord/tenants/ is now paginated server-side (page_size=20), returned
+  // as { tenants, count, next, previous }. `next` is a full URL — pass it
+  // straight to api.get() for "Load more".
   useEffect(() => {
     api.get('landlord/tenants/')
-      .then(r => setTenants(r.data.tenants || r.data || []))
+      .then(r => {
+        setTenants(r.data.tenants || r.data || [])
+        setNextPage(r.data?.next || null)
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
+
+  const loadMore = async () => {
+    if (!nextPage || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const r = await api.get(nextPage)
+      setTenants(prev => [...prev, ...(r.data.tenants || r.data || [])])
+      setNextPage(r.data?.next || null)
+    } catch (e) { console.error(e) } finally { setLoadingMore(false) }
+  }
 
   const filtered = tenants.filter(t => {
     const q = search.toLowerCase()
@@ -62,6 +80,18 @@ export default function TenantsPage() {
             </Tr>
           ))}
         </Table>
+      )}
+
+      {nextPage && !loading && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+          >
+            {loadingMore ? 'Loading...' : 'Load more'}
+          </button>
+        </div>
       )}
 
       {/* Tenant Detail Modal */}
